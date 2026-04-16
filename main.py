@@ -1,6 +1,5 @@
 import numpy as np
 
-
 R = np.array([ # restricciones
 	[1, 0],
 	[0, 2],
@@ -21,7 +20,7 @@ fila_z = np.hstack(([1], -c, np.zeros(3), [0])) # fila de la función objetivo
 # vstack : apila arrays en secuencia vertical (filas)
 tabla = np.vstack((fila_z, restricciones))
 
-columnas = ["Z","x1", "x2", "h1", "h2", "h3", "LD"]
+columnas = ["Z", "x1", "x2", "h1", "h2", "h3", "LD"]
 filas = ["Z","h1", "h2", "h3"]
 
 def imprimir_tabla(tabla, filas, columnas):
@@ -33,7 +32,7 @@ def imprimir_tabla(tabla, filas, columnas):
 
     for i, fila in enumerate(tabla): # imprimir cada fila de la tabla
         nombre = filas[i] # nombre de la fila
-        print(f"{nombre:>6}", end="  ") # imprimir nombre de la fila
+        print(f"{nombre:>8}", end="  ") # imprimir nombre de la fila
         for val in fila: 
             print(f"{val:>8.1f}", end="  ") # imprimir cada valor de la fila
         print() # nueva línea después de cada fila
@@ -41,26 +40,28 @@ def imprimir_tabla(tabla, filas, columnas):
     print("-" * (10 * len(header)))
 
 def columna_pivote(tabla):
-	return np.argmin(tabla[0, 1:-1]) + 1 # encontrar el índice de la columna pivote
-# argmin : devuelve el índice del valor mínimo a lo largo de un eje
+	return np.argmin(tabla[0, 1:-1]) + 1 # encontrar el índice de la columna pivote, evita Z y LD
+# argmin : devuelve el índice del valor mínimo a lo largo de un ejes
 
 def fila_pivote(tabla, col_pivote):
-	# full : 
-	ratios = np.full(tabla.shape[0] - 1, np.inf) # inicializar ratios con infinito
+	# full : crea un array con un mismo valor
+	# shape : dimensiones del array
+	# inf : representa el infinito, se usa para inicializar los coeficientes
+	coeficiente = np.full(tabla.shape[0] - 1, np.inf) # crea un array con las filas - 1 (Z) y lo llena con infinitos
 	for i in range(1, tabla.shape[0]):
 		if tabla[i, col_pivote] > 0: # solo considerar filas con coeficiente positivo en la columna pivote
-			ratios[i-1] = tabla[i, -1] / tabla[i, col_pivote] # calcular ratio LD / coeficiente pivote
-	return np.argmin(ratios) + 1 # devolver el índice de la fila pivote
+			coeficiente[i-1] = tabla[i, -1] / tabla[i, col_pivote] # calcular ratio LD / coeficiente pivote
+	return np.argmin(coeficiente) + 1 # devolver el índice de la fila pivote
 
 def pivotear(tabla, fila, col):
-	pivote = tabla[fila][col]
-	tabla[fila] = tabla[fila] / pivote
+	pivote = tabla[fila][col] # valor del pivote 
+	tabla[fila] = tabla[fila] / pivote # dividir la fila pivote por el valor del pivote para hacer que el pivote sea 1
 
-	for i in range(len(tabla)):
-		if i != fila:
-			factor = tabla[i][col]
-			tabla[i] = tabla[i] - factor * tabla[fila]
-	return tabla
+	for i in range(len(tabla)): # iterar sobre todas las filas
+		if i != fila: # para todas las filas excepto la fila pivote
+			factor = tabla[i][col] # coeficiente en la columna pivote de la fila actual
+			tabla[i] = tabla[i] - factor * tabla[fila] # fn - n * fp para que sea 0
+	return tabla # devuelve la tablita
 
 def negativos(tabla):
 	return np.any(tabla[0, 1:-1] < 0) # verificar si hay coeficientes negativos en la fila Z
@@ -68,8 +69,8 @@ def negativos(tabla):
 print("\n--- TABLA INICIAL ---")
 imprimir_tabla(tabla, filas, columnas)
 
+# pa que pivetee hasta que no hayan coeficientes negativos en la fila Z
 iteracion = 1
-
 while negativos(tabla):
     print(f"\n--- ITERACIÓN {iteracion} ---")
 
