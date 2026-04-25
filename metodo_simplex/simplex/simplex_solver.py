@@ -9,6 +9,11 @@ from .constants import EPSILON, MAX_ITERATIONS
 from .exceptions import InfeasibleError, StabilityError, UnboundedError
 from .pivot import pivot
 from .problem import LinearProgram
+from .tableado.xlsx_tableau_repo import (
+    cargar_matriz_desde_excel,
+    save_iteration_tableau_excel,
+    save_original_tableau_excel,
+)
 from .tableado.tableau import Tableau
 from .types import ObjectiveType
 
@@ -21,6 +26,37 @@ class Solution:
     variables: tuple[float, ...]  # vector solucion
     is_optimal: bool
     iterations: int
+
+
+def _guardar_tableau_en_excel(
+    tableau: Tableau, nombre_archivo: str = "tabla.xlsx"
+) -> None:
+    save_original_tableau_excel(
+        matriz_tableau=tableau.data,
+        variables_basicas=[int(v) for v in tableau.basic_vars.tolist()],
+        cantidad_variables_originales=tableau.num_original_vars,
+        cantidad_variables_holgura=tableau.num_slack,
+        cantidad_variables_exceso=tableau.num_surplus,
+        cantidad_variables_artificiales=tableau.num_artificial,
+        nombre_archivo=nombre_archivo,
+    )
+
+
+def _guardar_iteracion_en_historial_excel(
+    tableau: Tableau,
+    phase: int,
+    iteration: int,
+) -> None:
+    save_iteration_tableau_excel(
+        matriz_tableau=tableau.data,
+        variables_basicas=[int(v) for v in tableau.basic_vars.tolist()],
+        cantidad_variables_originales=tableau.num_original_vars,
+        cantidad_variables_holgura=tableau.num_slack,
+        cantidad_variables_exceso=tableau.num_surplus,
+        cantidad_variables_artificiales=tableau.num_artificial,
+        fase=phase,
+        iteracion=iteration,
+    )
 
 
 # visualizacion
@@ -161,6 +197,19 @@ def extract(tableau: Tableau) -> tuple[float, tuple[float, ...]]:
 
 
 def setup_phase1(tableau: Tableau) -> None:
+    total_vars = (
+        tableau.num_original_vars
+        + tableau.num_slack
+        + tableau.num_surplus
+        + tableau.num_artificial
+    )
+
+    # la fase 1 parte desde la matriz actual almacenada en excel
+    try:
+        tableau.data = cargar_matriz_desde_excel(total_vars, tableau.num_constraints)
+    except (FileNotFoundError, ValueError):
+        pass
+
     tableau.data[tableau.objective_row] = 0.0
 
     for i in range(tableau.num_constraints):
@@ -214,10 +263,12 @@ def simplex_iterate(
     while True:
         col = choose_entering(tableau, epsilon)
         if col is None:
+            _guardar_iteracion_en_historial_excel(tableau, phase, iteration)
             return tableau, iteration
 
         row = choose_leaving(tableau, col, epsilon)
         if row is None:
+            _guardar_iteracion_en_historial_excel(tableau, phase, iteration)
             return tableau, iteration
 
         leaving = int(tableau.basic_vars[row])
@@ -230,6 +281,7 @@ def simplex_iterate(
             print_tableau(tableau, iteration + 1, phase, row, col, leaving)
 
         iteration += 1
+        _guardar_iteracion_en_historial_excel(tableau, phase, iteration)
 
 
 def solve(
@@ -239,6 +291,8 @@ def solve(
     trace: bool = False,
 ) -> Solution:
     tableau = Tableau.from_lp(problem, epsilon)
+
+    _guardar_tableau_en_excel(tableau, "inicial.xlsx")
 
     if trace:
         print("-" * 60)
@@ -265,6 +319,7 @@ def solve(
 
         tableau = remove_artificial_from_basis(tableau, epsilon)
         tableau = tableau.remove_artificial_columns()
+
         tableau.restore_objective(problem.c, is_min)
         tableau.update_objective_rhs()
         tableau.zero_basic_in_objective()
@@ -289,5 +344,7 @@ def solve(
     optimal_value, variables = extract(tableau)
     if is_min:
         optimal_value = -optimal_value
+
+    _guardar_tableau_en_excel(tableau, "final.xlsx")
 
     return Solution(optimal_value, variables, True, iteration)

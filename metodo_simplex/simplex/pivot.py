@@ -5,6 +5,10 @@ import numpy as np
 # SIEMPRE SE BUSCA [[0],[0],[1],[0],[O]], osea un solo 1 en la columna
 from .constants import EPSILON
 from .exceptions import PivotError, StabilityError
+from .tableado.xlsx_tableau_repo import (
+    cargar_matriz_desde_excel,
+    save_original_tableau_excel,
+)
 from .tableado.tableau import Tableau
 
 
@@ -14,8 +18,18 @@ def pivot(
     pivot_col: int,  # col var entrante
     epsilon: float = EPSILON,
 ) -> Tableau:
+    total_vars = (
+        tableau.num_original_vars
+        + tableau.num_slack
+        + tableau.num_surplus
+        + tableau.num_artificial
+    )
 
-    data = tableau.data.copy()
+    # se toma como fuente la matriz guardada en el excel; si no existe, usa la actual
+    try:
+        data = cargar_matriz_desde_excel(total_vars, tableau.num_constraints)
+    except (FileNotFoundError, ValueError):
+        data = tableau.data.copy()
 
     pivot_val = data[pivot_row, pivot_col]
 
@@ -40,17 +54,11 @@ def pivot(
     new_basic = tableau.basic_vars.copy()
     new_basic[pivot_row] = pivot_col  # ej: s1->x1
 
-    total_vars = (
-        tableau.num_original_vars
-        + tableau.num_slack
-        + tableau.num_surplus
-        + tableau.num_artificial
-    )
     all_vars = np.arange(total_vars, dtype=np.intp)  # para [0,1,2,..,n]
 
     nonbasic = np.setdiff1d(all_vars, new_basic, assume_unique=True)  # todas - VB
 
-    return Tableau(  # nuevo objeto tableau actualizado
+    nuevo_tableau = Tableau(  # nuevo objeto tableau actualizado
         data=data,
         basic_vars=new_basic,
         nonbasic_vars=nonbasic,
@@ -60,3 +68,5 @@ def pivot(
         num_surplus=tableau.num_surplus,
         num_artificial=tableau.num_artificial,
     )
+
+    return nuevo_tableau
