@@ -10,13 +10,11 @@ from .exceptions import (
 from .pivot import pivot
 from .problem import LinearProgram
 from .simplex_solver import (
-    Solution,
     choose_entering,
     choose_leaving,
-    extract,
-    print_tableau,
-    solve,
 )
+from .solve import solve
+from .solution import Solution
 from .tableado.tableau import Tableau
 from .types import (
     BasicIndices,
