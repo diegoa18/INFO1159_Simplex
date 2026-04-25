@@ -9,7 +9,7 @@ from .constants import EPSILON, MAX_ITERATIONS
 from .exceptions import InfeasibleError, StabilityError, UnboundedError
 from .pivot import pivot
 from .problem import LinearProgram
-from .tableau import Tableau
+from .tableado.tableau import Tableau
 from .types import ObjectiveType
 
 # SOLVER

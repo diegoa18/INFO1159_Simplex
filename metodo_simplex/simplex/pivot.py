@@ -5,7 +5,7 @@ import numpy as np
 # SIEMPRE SE BUSCA [[0],[0],[1],[0],[O]], osea un solo 1 en la columna
 from .constants import EPSILON
 from .exceptions import PivotError, StabilityError
-from .tableau import Tableau
+from .tableado.tableau import Tableau
 
 
 def pivot(

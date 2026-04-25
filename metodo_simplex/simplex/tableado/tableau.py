@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .constants import EPSILON
-from .types import ConstraintType, Matrix, ObjectiveType
+from ..constants import EPSILON
+from ..types import ConstraintType, Matrix, ObjectiveType
+from .csv_tableau_repo import save_original_tableau_excel
 
 if TYPE_CHECKING:
-    from .problem import LinearProgram
+    from ..problem import LinearProgram
 
 
 @dataclass
@@ -79,6 +80,15 @@ class Tableau:
         if problem.objective == ObjectiveType.MIN:
             obj_row = problem.c
         tableau[m, :n] = obj_row
+
+        save_original_tableau_excel(
+            matriz_tableau=tableau,
+            variables_basicas=basic_vars,
+            cantidad_variables_originales=n,
+            cantidad_variables_holgura=num_slack,
+            cantidad_variables_exceso=num_surplus,
+            cantidad_variables_artificiales=num_artificial,
+        )
 
         return cls(
             data=tableau,

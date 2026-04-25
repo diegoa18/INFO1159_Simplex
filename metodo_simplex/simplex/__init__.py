@@ -17,7 +17,7 @@ from .simplex_solver import (
     print_tableau,
     solve,
 )
-from .tableau import Tableau
+from .tableado.tableau import Tableau
 from .types import (
     BasicIndices,
     ConstraintRelations,
