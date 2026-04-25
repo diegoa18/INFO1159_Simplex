@@ -15,8 +15,9 @@ def main() -> None:
     # MATRIZ A
     A = np.array(
         [
-            [1.0, 1.0],
-            [2.0, 1.0],
+            [1, 0],
+            [0, 2],
+            [3, 2],
         ],
         dtype=np.float64,
     )
@@ -24,8 +25,9 @@ def main() -> None:
     # LADO DERECHO B (MISMO NUMERO DE FILAS QUE A)
     b = np.array(
         [
-            4.0,
-            6.0,
+            4,
+            12,
+            18,
         ],
         dtype=np.float64,
     )
@@ -33,8 +35,8 @@ def main() -> None:
     # Z
     c = np.array(
         [
-            3.0,
-            2.0,
+            30000,
+            50000,
         ],
         dtype=np.float64,
     )
@@ -42,6 +44,7 @@ def main() -> None:
     # TIPO DE RESTRICCIONES
     constraints = np.array(
         [
+            ConstraintType.LE,
             ConstraintType.LE,
             ConstraintType.LE,
         ]
