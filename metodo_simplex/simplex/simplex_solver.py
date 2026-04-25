@@ -5,7 +5,7 @@ from typing import Optional
 
 from .printer_tableau import print_tableau
 from .solution import Solution
-from .tableau_logger import save_initial_tableau, save_iteration
+from .tableau_logger import save_initial_tableau, save_iteration, save_final_tableau
 from .constants import EPSILON, MAX_ITERATIONS
 from .exceptions import StabilityError, UnboundedError
 from .pivot import pivot
@@ -22,6 +22,8 @@ class SimplexSolver:
 
         tableau = Tableau.from_lp(problem)
 
+        save_initial_tableau(tableau)
+
         is_min = problem.objective == ObjectiveType.MIN
 
         # función objetivo inicial (minimización)
@@ -30,6 +32,8 @@ class SimplexSolver:
 
         # ejecutar simplex
         tableau, iterations = simplex_iterate(tableau, trace=self.trace)
+
+        save_final_tableau(tableau)
 
         if iterations >= MAX_ITERATIONS:
             raise StabilityError("Exceso de iteraciones")

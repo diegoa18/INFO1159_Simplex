@@ -5,6 +5,7 @@ from .simplex_solver import simplex_iterate, SimplexSolver
 from .exceptions import InfeasibleError
 from .solution import Solution
 from .types import ObjectiveType
+from .tableau_logger import save_initial_tableau, save_final_tableau
 
 class TwoPhaseSolver:
 
@@ -15,6 +16,7 @@ class TwoPhaseSolver:
     def solve(self, problem):
 
         tableau = Tableau.from_lp(problem)
+        save_initial_tableau(tableau)
         self._build_phase1_objective(tableau)
 
         tableau, it1 = simplex_iterate(
@@ -35,6 +37,8 @@ class TwoPhaseSolver:
         )
 
         opt, vars_ = self._extract(tableau)
+
+        save_final_tableau(tableau)
 
         if problem.objective == ObjectiveType.MIN:
             opt = -opt
