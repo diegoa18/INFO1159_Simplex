@@ -3,44 +3,39 @@ from __future__ import annotations
 import numpy as np
 from typing import Optional
 
-from .printer_tableau import print_tableau
-from .solution import Solution
-from .tableau_logger import save_initial_tableau, save_iteration, save_final_tableau
-from .constants import EPSILON, MAX_ITERATIONS
-from .exceptions import StabilityError, UnboundedError
-from .pivot import pivot
-from .problem import LinearProgram
-from .tableado.tableau import Tableau
-from .types import ObjectiveType
+from ..printer_tableau import print_tableau
+from ..solution import Solution
+from ..tableau_logger import save_initial_tableau, save_iteration, save_final_tableau
+from ..constants import EPSILON, MAX_ITERATIONS
+from ..exceptions import StabilityError, UnboundedError
+from ..pivot import pivot
+from ..problem import LinearProgram
+from ..tableado.tableau import Tableau
+from ..types import ObjectiveType
 
 class SimplexSolver:
-
     def __init__(self, trace: bool = False):
         self.trace = trace
 
     def solve(self, problem: LinearProgram):
-
+        # 1. Preparar el Tableau (Standard: solo holguras)
         tableau = Tableau.from_lp(problem)
-
         save_initial_tableau(tableau)
 
         is_min = problem.objective == ObjectiveType.MIN
-
-        # función objetivo inicial (minimización)
+        
+        # Sincronizar función objetivo si es minimización
         if is_min:
             tableau.data[tableau.objective_row, :tableau.num_original_vars] = problem.c
 
-        # ejecutar simplex
+        # 2. Iterar hasta el óptimo
         tableau, iterations = simplex_iterate(tableau, trace=self.trace)
-
-        save_final_tableau(tableau)
 
         if iterations >= MAX_ITERATIONS:
             raise StabilityError("Exceso de iteraciones")
 
-        if tableau.has_artificial_in_basis():
-            raise UnboundedError("Solución no válida (artificial en base)")
-
+        # 3. Extraer y retornar
+        save_final_tableau(tableau)
         optimal_value, variables = extract(tableau)
 
         if is_min:
