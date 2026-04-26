@@ -56,7 +56,7 @@ def print_tableau(
     # fila Z
     z_row = tableau.data[tableau.objective_row]
     row_str = "Z ".ljust(3) + f"{-1.0:>{col_width}.2f}"
-
+    
     for j in ordered_cols:
         row_str += f"{z_row[j]:>{col_width}.2f}"
 

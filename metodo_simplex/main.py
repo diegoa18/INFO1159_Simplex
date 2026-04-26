@@ -1,66 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
-from simplex import (
-    ConstraintType,
-    InfeasibleError,
-    LinearProgram,
-    ObjectiveType,
-    UnboundedError,
-    solve,
-)
+from simplex import InfeasibleError, UnboundedError, solve
+from simplex.input_parser import build_problem_from_input
 
 
 def main() -> None:
-    # MATRIZ A
-    A = np.array(
-        [
-            [1, 0],
-            [0, 2],
-            [3, 2],
-        ],
-        dtype=np.float64,
-    )
-
-    # LADO DERECHO B (MISMO NUMERO DE FILAS QUE A)
-    b = np.array(
-        [
-            4,
-            12,
-            18,
-        ],
-        dtype=np.float64,
-    )
-
-    # Z
-    c = np.array(
-        [
-            30000,
-            50000,
-        ],
-        dtype=np.float64,
-    )
-
-    # TIPO DE RESTRICCIONES
-    constraints = np.array(
-        [
-            ConstraintType.LE,
-            ConstraintType.LE,
-            ConstraintType.LE,
-        ]
-    )
-
-    # TIPO OBJETIVO
-    objective = ObjectiveType.MAX
-
-    # DEFINICION
-    problem = LinearProgram(
-        A=A,
-        b=b,
-        c=c,
-        constraints=constraints,
-        objective=objective,
-    )
+    problem = build_problem_from_input()
 
     # RESOLUCION
     try:

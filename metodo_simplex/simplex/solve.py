@@ -1,5 +1,5 @@
-from .simplex_solver import SimplexSolver
-from .two_phases_solver import TwoPhaseSolver
+from .algoritmo.simplex_solver import SimplexSolver
+from .algoritmo.two_phases_solver import TwoPhaseSolver
 from .types import ConstraintType, ObjectiveType
 from .problem import LinearProgram
 
