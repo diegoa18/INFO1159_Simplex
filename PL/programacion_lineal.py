@@ -2,8 +2,10 @@ from unittest import result
 
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.linalg import norm
 
 EPS = 1e-9  # 0.000000001 -> epsilon numerico para evitar errores de precision
+EPS_PAR = 1e-7
 
 
 def normalizar(valor):  # redondear a 0 o a 6 decimales
@@ -25,7 +27,7 @@ def parse_num(x):
 def son_paralelas(r1, r2):
     # [:2] para ignorar c y asi sacar determinante con (an,bn), si det = 0 -> ||
     (a1, b1), (a2, b2) = r1[:2], r2[:2]
-    return abs(a1 * b2 - a2 * b1) < EPS
+    return abs(a1 * b2 - a2 * b1) < EPS_PAR
 
 
 def calcular_interseccion(r1, r2):
@@ -34,6 +36,10 @@ def calcular_interseccion(r1, r2):
 
     (a1, b1, c1), (a2, b2, c2) = r1[:3], r2[:3]  # desempaquetar restriccion
     det = a1 * b2 - a2 * b1  # det
+
+    if abs(det) < EPS:
+        return None
+
     return (
         (c1 * b2 - c2 * b1) / det,
         (a1 * c2 - a2 * c1) / det,
@@ -103,24 +109,52 @@ def calcular_vertices(restricciones):
 
             px, py = normalizar(p[0]), normalizar(p[1])  # normalizar coordenadas
 
-            if (px, py) in checked:  # evitar duplicado
+            key = (round(px, 6), round(py, 6))
+            if key in checked:
                 continue
 
             # actualizacion
-            checked.add((px, py))
+            checked.add(key)
             all_vertices.append((px, py))
 
             # verificar factibilidad
-            if px >= -EPS and py >= -EPS and es_factible((px, py), restricciones):
+            if es_factible((px, py), restricciones):
                 factibles.append((px, py))
 
-                # recalcular el hull con el nuevo vertice
-                hull = convex_hull(factibles)
+                # recalcular el hull con el nuevo vertice, con sentido
+                if len(factibles) >= 3:
+                    hull = convex_hull(factibles)
+                else:
+                    hull = factibles.copy()
+
     return all_vertices, factibles, hull
 
 
 def evaluar_objetivo(vertices, a, b):  # evaluar Z con ciertos vertices
     return [(v, a * v[0] + b * v[1]) for v in vertices]  # retorna tuplas -> ((x,y), Z)
+
+
+def no_acotado(hull, a_obj, b_obj):
+    if len(hull) < 3:
+        return True
+
+    direccion = np.array([a_obj, b_obj], dtype=float)
+    direccion = direccion / (norm(direccion) + EPS)
+
+    for i in range(len(hull)):
+        p1 = np.array(hull[i])
+        p2 = np.array(hull[(i + 1) % len(hull)])
+
+        edge = p2 - p1
+
+        normal = np.array([-edge[1], edge[0]])
+        normal = normal / (norm(normal) + EPS)
+
+        # si TODAS las normales tienen producto positivo → está cerrado
+        if np.dot(normal, direccion) > EPS:
+            return False  # está bloqueado → acotado
+
+    return True  # ninguna bloquea → no acotado
 
 
 # solver
@@ -129,21 +163,35 @@ def resolver_PL(
 ):  # a/b_obj son los coeficientes en Z
 
     all_vertices, vertices, hull = calcular_vertices(restricciones)  # obtencion
-    resultados = evaluar_objetivo(vertices, a_obj, b_obj)  # evaluacion
+    resultados = evaluar_objetivo(hull, a_obj, b_obj)  # evaluacion
 
-    # caso infactible!!!
-    if not resultados:
-        return dict(
-            estado="infactible",
-            all_vertices=all_vertices,
-            vertces_factibles=[],
-            hull=[],
-            optimo=None,
-            valor_optimo=None,
-            resultados=[],
-            coeficientes=(a_obj, b_obj),
-            tipo=tipo,
-        )
+    # validaciones estructurales
+    if not resultados or len(vertices) == 0:
+        return dict(estado="infactible")
+
+    if abs(a_obj) < EPS and abs(b_obj) < EPS:
+        raise ValueError("Función objetivo inválida")
+
+    if len(hull) == 1:
+        return dict(estado="optimo_degenerado_punto")
+
+    if len(hull) == 2:
+        return dict(estado="optimo_degenerado_segmento")
+
+    # degeneración geométrica
+    if len(hull) >= 3:
+        area = 0
+        for i in range(len(hull)):
+            x1, y1 = hull[i]
+            x2, y2 = hull[(i + 1) % len(hull)]
+            area += x1 * y2 - x2 * y1
+
+        if abs(area) < EPS:
+            return dict(estado="degenerado")
+
+    # ⚠️ ESTE VA DESPUÉS
+    if no_acotado(hull, a_obj, b_obj):
+        return dict(estado="no_acotado")
 
     optimo = (  # emplear max o min
         max(resultados, key=lambda r: r[1])  # r[1] -> Z
@@ -155,7 +203,7 @@ def resolver_PL(
     return dict(
         estado="optimo",
         all_vertices=all_vertices,
-        vertices_factibles=vertices,
+        vertices_factibles=hull,
         hull=hull,
         optimo=optimo,
         valor_optimo=optimo[1],
@@ -163,6 +211,26 @@ def resolver_PL(
         coeficientes=(a_obj, b_obj),
         tipo=tipo,
     )
+
+
+MENSAJES_ESTADO = {
+    "infactible": "No hay región factible",
+    "no_acotado": "Problema no acotado",
+    "optimo_degenerado_punto": "Óptimo degenerado (punto)",
+    "optimo_degenerado_segmento": "Óptimo degenerado (segmento)",
+    "degenerado": "Región degenerada (área ~ 0)",
+}
+
+
+def manejar_estado(solucion):
+    estado = solucion["estado"]
+
+    if estado != "optimo":
+        msg = MENSAJES_ESTADO.get(estado, f"Estado no manejado: {estado}")
+        print(msg)
+        return False
+
+    return True
 
 
 # VISUALIZACION
@@ -275,7 +343,7 @@ def graficar_vertices(ax, all_v, factibles_v, optimo):  # puntos clave
         )
 
     for v in factibles_v:  # optimo
-        if v == optimo[0]:
+        if optimo is not None and v == optimo[0]:
             ax.scatter(
                 *v,
                 c="gold",
@@ -349,49 +417,54 @@ def graficar_etiquetas(ax, resultados, optimo):
 
 def graficar(solucion, restricciones):
 
-    if solucion["estado"] == "infactible":
-        print("no hay region factible en este caso")
+    if not manejar_estado(solucion):
         return
 
     fig, ax = plt.subplots(figsize=(12, 10))
     limites = calcular_limites(solucion["vertices_factibles"] or [(0, 0)])
+
     configurar_ejes(ax, limites)
     graficar_restricciones(ax, restricciones, limites)
     graficar_region(ax, solucion["hull"])
+
+    optimo = solucion["optimo"]
+
     graficar_vertices(
-        ax, solucion["all_vertices"], solucion["vertices_factibles"], solucion["optimo"]
-    )
-    graficar_Z(
         ax,
-        solucion["resultados"],
-        *solucion["coeficientes"],
-        limites,
-        solucion["optimo"],
+        solucion["all_vertices"],
+        solucion["vertices_factibles"],
+        optimo,
     )
 
-    graficar_etiquetas(ax, solucion["resultados"], solucion["optimo"])
+    if optimo is not None:
+        graficar_Z(
+            ax,
+            solucion["resultados"],
+            *solucion["coeficientes"],
+            limites,
+            optimo,
+        )
+
+        graficar_etiquetas(ax, solucion["resultados"], optimo)
+
+        opt = optimo[0]
+        titulo = (
+            f"Óptimo: ({opt[0]:.2f}, {opt[1]:.2f}) Z = {solucion['valor_optimo']:.2f}"
+        )
+
+    else:
+        titulo = "Problema no acotado"
+
+    ax.set_title(titulo, fontsize=14, fontweight="bold", pad=12)
+
     ax.legend(loc="upper right", fontsize=9, framealpha=0.9)
-    opt = solucion["optimo"][0]
-    ax.set_title(
-        f"Solución Óptima: ({opt[0]:.2f}, {opt[1]:.2f}) con Z = {solucion['valor_optimo']:.2f}",
-        fontsize=14,
-        fontweight="bold",
-        pad=12,
-    )
     plt.tight_layout()
     plt.show()
 
 
-# TEST
+# TESTs
 restricciones = [
-    # EJES
-    (1, 0, 0, ">="),
-    (0, 1, 0, ">="),
-    # RESTRICCIONES
-    (1, 1, 10, "<="),
-    (1.0000001, 1, 10, "<="),
-    (1, 1, 6, "<="),
-    (1, 1, 1, ">="),
+    (0, 0, 5, "<="),  # inválida (no es recta)
 ]
 solucion = resolver_PL(restricciones, a_obj=1, b_obj=1, tipo="max")  # Z
 graficar(solucion, restricciones)
