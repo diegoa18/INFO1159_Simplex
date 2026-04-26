@@ -158,59 +158,67 @@ def no_acotado(hull, a_obj, b_obj):
 
 
 # solver
-def resolver_PL(
-    restricciones, a_obj, b_obj, tipo="max"
-):  # a/b_obj son los coeficientes en Z
+def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
 
-    all_vertices, vertices, hull = calcular_vertices(restricciones)  # obtencion
-    resultados = evaluar_objetivo(hull, a_obj, b_obj)  # evaluacion
+    all_vertices, vertices, hull = calcular_vertices(restricciones)
+    resultados = evaluar_objetivo(hull, a_obj, b_obj)
 
-    # validaciones estructurales
-    if not resultados or len(vertices) == 0:
-        return dict(estado="infactible")
+    solucion = {
+        "estado": None,
+        "all_vertices": all_vertices,
+        "vertices_factibles": hull,
+        "hull": hull,
+        "resultados": resultados,
+        "coeficientes": (a_obj, b_obj),
+        "tipo": tipo,
+        "optimo": None,
+        "valor_optimo": None,
+    }
+
+    if len(hull) == 0:
+        solucion["estado"] = "infactible"
+        return solucion
 
     if abs(a_obj) < EPS and abs(b_obj) < EPS:
         raise ValueError("Función objetivo inválida")
 
     if len(hull) == 1:
-        return dict(estado="optimo_degenerado_punto")
+        solucion["estado"] = "optimo_degenerado_punto"
+        return solucion
 
     if len(hull) == 2:
-        return dict(estado="optimo_degenerado_segmento")
+        solucion["estado"] = "optimo_degenerado_segmento"
+        return solucion
 
-    # degeneración geométrica
     if len(hull) >= 3:
-        area = 0
-        for i in range(len(hull)):
-            x1, y1 = hull[i]
-            x2, y2 = hull[(i + 1) % len(hull)]
-            area += x1 * y2 - x2 * y1
-
+        area = sum(
+            hull[i][0] * hull[(i + 1) % len(hull)][1]
+            - hull[(i + 1) % len(hull)][0] * hull[i][1]
+            for i in range(len(hull))
+        )
         if abs(area) < EPS:
-            return dict(estado="degenerado")
+            solucion["estado"] = "degenerado"
+            return solucion
 
-    # ⚠️ ESTE VA DESPUÉS
     if no_acotado(hull, a_obj, b_obj):
-        return dict(estado="no_acotado")
+        solucion["estado"] = "no_acotado"
+        return solucion
 
-    optimo = (  # emplear max o min
-        max(resultados, key=lambda r: r[1])  # r[1] -> Z
+    optimo = (
+        max(resultados, key=lambda r: r[1])
         if tipo == "max"
         else min(resultados, key=lambda r: r[1])
     )
 
-    # tetorno de diccionario completo
-    return dict(
-        estado="optimo",
-        all_vertices=all_vertices,
-        vertices_factibles=hull,
-        hull=hull,
-        optimo=optimo,
-        valor_optimo=optimo[1],
-        resultados=resultados,
-        coeficientes=(a_obj, b_obj),
-        tipo=tipo,
+    solucion.update(
+        {
+            "estado": "optimo",
+            "optimo": optimo,
+            "valor_optimo": optimo[1],
+        }
     )
+
+    return solucion
 
 
 MENSAJES_ESTADO = {
@@ -236,21 +244,61 @@ def manejar_estado(solucion):
 # VISUALIZACION
 
 
-def calcular_limites(vertices, margen=2.0):
-    if not vertices:  # fallback
+def fmt_num(x, sci_thresh=1e4):
+    if x == 0:
+        return "0"
+
+    ax = abs(x)
+
+    if ax >= sci_thresh or ax <= 1e-4:
+        return f"{x:.2e}"
+    elif abs(x - int(x)) < EPS:
+        return f"{int(x)}"
+    else:
+        return f"{x:.2f}"
+
+
+def fmt_objetivo(a, b):
+    terms = []
+    if abs(a) > EPS:
+        terms.append(f"{fmt_num(a)}x")
+
+    if abs(b) > EPS:
+        sign = "+" if b > 0 and terms else ""
+        terms.append(f"{sign}{fmt_num(b)}y" if b > 0 else f"-{fmt_num(abs(b))}y")
+
+    return " ".join(terms) if terms else "0"
+
+
+def construir_titulo(solucion):
+    (x, y), z = solucion["optimo"]
+    a, b = solucion["coeficientes"]
+
+    expr = fmt_objetivo(a, b)
+
+    return f"Z = {expr}  |  en ({fmt_num(x)}, {fmt_num(y)}) → Z = {fmt_num(z)}"
+
+
+def calcular_limites(vertices, margen_rel=0.05):
+    if not vertices:
         return -10, 10, -10, 10
 
-    vx, vy = zip(*vertices)  # separacion de coordenadas
+    vx, vy = zip(*vertices)
 
-    # extremos
-    xmin, xmax = min(vx) - margen, max(vx) + margen
-    ymin, ymax = min(vy) - margen, max(vy) + margen
+    xmin, xmax = min(vx), max(vx)
+    ymin, ymax = min(vy), max(vy)
 
-    # tamaño minimo -> 4
-    xr, yr = max(xmax - xmin, 4.0), max(ymax - ymin, 4.0)
-    # centro geometrico
-    xm, ym = (xmin + xmax) / 2, (ymin + ymax) / 2
-    return xm - xr / 2, xm + xr / 2, ym - yr / 2, ym + yr / 2  # limites finales
+    dx = xmax - xmin
+    dy = ymax - ymin
+
+    # evitar colapso cuando dx o dy = 0
+    dx = dx if dx > EPS else max(abs(xmax), 1.0)
+    dy = dy if dy > EPS else max(abs(ymax), 1.0)
+
+    mx = dx * margen_rel
+    my = dy * margen_rel
+
+    return xmin - mx, xmax + mx, ymin - my, ymax + my
 
 
 def puntos_recta(r, xmin, xmax, ymin, ymax):
@@ -278,7 +326,9 @@ def configurar_ejes(ax, limites):  # limites -> (xmin, xmax, ymin, ymax)
     ax.set_xlim(limites[:2])
     ax.set_ylim(limites[2:])
 
-    ax.set_aspect("equal")  # ejes proporcionales
+    ax.set_aspect("auto")
+
+    ax.ticklabel_format(style="sci", axis="both", scilimits=(0, 0))
 
     ax.grid(True, alpha=0.3, linestyle="--")
     ax.set_xlabel("x", fontsize=11)
@@ -403,7 +453,7 @@ def graficar_etiquetas(ax, resultados, optimo):
     for v, z in resultados:
         es_opt = v == optimo[0]
         ax.annotate(
-            f"Z = {z:.2f}",
+            f"Z = {fmt_num(z)}",
             v,
             textcoords="offset points",
             xytext=(8, 8),
@@ -421,11 +471,13 @@ def graficar(solucion, restricciones):
         return
 
     fig, ax = plt.subplots(figsize=(12, 10))
-    limites = calcular_limites(solucion["vertices_factibles"] or [(0, 0)])
+
+    hull = solucion["hull"]
+    limites = calcular_limites(hull or [(0, 0)])
 
     configurar_ejes(ax, limites)
     graficar_restricciones(ax, restricciones, limites)
-    graficar_region(ax, solucion["hull"])
+    graficar_region(ax, hull)
 
     optimo = solucion["optimo"]
 
@@ -436,7 +488,7 @@ def graficar(solucion, restricciones):
         optimo,
     )
 
-    if optimo is not None:
+    if optimo:
         graficar_Z(
             ax,
             solucion["resultados"],
@@ -444,30 +496,28 @@ def graficar(solucion, restricciones):
             limites,
             optimo,
         )
-
         graficar_etiquetas(ax, solucion["resultados"], optimo)
-
-        opt = optimo[0]
-        titulo = (
-            f"Óptimo: ({opt[0]:.2f}, {opt[1]:.2f}) Z = {solucion['valor_optimo']:.2f}"
-        )
-
+        titulo = construir_titulo(solucion)
     else:
         titulo = "Problema no acotado"
 
     ax.set_title(titulo, fontsize=14, fontweight="bold", pad=12)
 
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.9)
+    loc = "best" if len(hull) > 3 else "upper right"
+    ax.legend(loc=loc, fontsize=9, framealpha=0.9).set_zorder(100)
+
     plt.tight_layout()
     plt.show()
 
 
-# TESTs
 restricciones = [
-    (0, 0, 5, "<="),  # inválida (no es recta)
+    (1, 0, 0, ">="),
+    (0, 1, 0, ">="),
+    (1, 1, 1e9, "<="),
 ]
-solucion = resolver_PL(restricciones, a_obj=1, b_obj=1, tipo="max")  # Z
+
+solucion = resolver_PL(restricciones, a_obj=1e6, b_obj=1e6, tipo="max")
 graficar(solucion, restricciones)
 
 
-"""DEBE CONTENER INPUT NATURAL PARA PROBLEMAS DE PROGRAMACION LINEAL"""
+"""DEBE CONTENER INPUT NATURAL PARA PROBLEMAS DE PROGRAMACION wswsLINEAL"""
