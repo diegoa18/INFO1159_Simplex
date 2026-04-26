@@ -1,32 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-import math
 
 import numpy as np
 import pandas as pd
 
-
-def _format_number_scientific(value: float) -> str:
-
-    if value == 0:
-        return "0.00"
-
-    abs_val = abs(value)
-
-    # notación de potencia 10^n para números muy grandes o muy pequeños
-    if abs_val >= 1e4 or (abs_val < 1e-3 and abs_val != 0):
-        exp = math.floor(math.log10(abs_val))
-        mantisa = value / (10 ** exp)
-
-        # formato: mantisa×10^exp
-        if abs(mantisa - round(mantisa)) < 0.01:
-            return f"{int(round(mantisa))}×10^{exp}"
-        else:
-            return f"{mantisa:.1f}×10^{exp}"
-
-    # formato normal con 2 decimales
-    return f"{value:.2f}"
+from ..printer_tableau import format_number_scientific
 
 
 
@@ -120,8 +99,8 @@ def _crear_dataframe_tableau(
         [
             "Z",
             -1.0,
-            *[_format_number_scientific(val) for val in matriz_tableau[indice_fila_objetivo, :total_variables].tolist()],
-            _format_number_scientific(float(matriz_tableau[indice_fila_objetivo, -1])),
+            *[format_number_scientific(val) for val in matriz_tableau[indice_fila_objetivo, :total_variables].tolist()],
+            format_number_scientific(float(matriz_tableau[indice_fila_objetivo, -1])),
         ]
     ]
 
@@ -136,8 +115,8 @@ def _crear_dataframe_tableau(
                     cantidad_variables_exceso,
                 ),
                 0.0,
-                *[_format_number_scientific(val) for val in matriz_tableau[indice_fila_restriccion, :total_variables].tolist()],
-                _format_number_scientific(float(matriz_tableau[indice_fila_restriccion, -1])),
+                *[format_number_scientific(val) for val in matriz_tableau[indice_fila_restriccion, :total_variables].tolist()],
+                format_number_scientific(float(matriz_tableau[indice_fila_restriccion, -1])),
             ]
         )
 

@@ -4,14 +4,14 @@ import math
 from .tableado.tableau import Tableau
 
 
-def format_number(value: float, width: int = 7) -> str:
+def format_number_scientific(value: float) -> str:
     if value == 0:
-        return f"{0.0:>{width}.2f}"
+        return "0.00"
 
     abs_val = abs(value)
 
     # notación de potencia 10^n para números muy grandes o muy pequeños
-    if abs_val >= 1e4 or (abs_val < 1e-3 and abs_val != 0):
+    if abs_val >= 1e4 or abs_val < 1e-3:
         exp = math.floor(math.log10(abs_val))
         mantisa = value / (10 ** exp)
 
@@ -19,12 +19,15 @@ def format_number(value: float, width: int = 7) -> str:
         if abs(mantisa - round(mantisa)) < 0.01:
             # si la mantisa es casi un entero
             return f"{int(round(mantisa))}×10^{exp}"
-        else:
-            # si tiene decimales
-            return f"{mantisa:.1f}×10^{exp}"
+        # si tiene decimales
+        return f"{mantisa:.1f}×10^{exp}"
 
     # formato normal con 2 decimales
-    return f"{value:>{width}.2f}"
+    return f"{value:.2f}"
+
+
+def format_number(value: float, width: int = 7) -> str:
+    return f"{format_number_scientific(value):>{width}}"
 
 
 def print_tableau(

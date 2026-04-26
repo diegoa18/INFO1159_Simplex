@@ -46,8 +46,6 @@ __all__ = [  # ->interfaz paquete
     "pivot",
     "solve",
     "Solution",
-    "print_tableau",
     "choose_entering",
     "choose_leaving",
-    "extract",
 ]

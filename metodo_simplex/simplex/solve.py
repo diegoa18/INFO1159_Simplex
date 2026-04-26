@@ -1,6 +1,6 @@
 from .algoritmo.simplex_solver import SimplexSolver
 from .algoritmo.two_phases_solver import TwoPhaseSolver
-from .types import ConstraintType, ObjectiveType
+from .types import ConstraintType
 from .problem import LinearProgram
 
 def requires_two_phase(lp: LinearProgram) -> bool:

@@ -1,13 +1,13 @@
 from __future__ import annotations
-import numpy as np
+
 from .simplex_solver import simplex_iterate, extract
 from ..solution import Solution
 from ..tableau_logger import save_initial_tableau, save_final_tableau
-from ..constants import EPSILON, MAX_ITERATIONS
-from ..exceptions import StabilityError, UnboundedError
+from ..constants import EPSILON
+from ..exceptions import UnboundedError
 from ..problem import LinearProgram
 from ..tableado.tableau import Tableau
-from ..types import ObjectiveType, ConstraintType
+from ..types import ObjectiveType
 from ..printer_tableau import print_tableau
 
 class TwoPhaseSolver:
