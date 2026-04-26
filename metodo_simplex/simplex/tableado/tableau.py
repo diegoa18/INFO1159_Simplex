@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .constants import EPSILON
-from .types import ConstraintType, Matrix, ObjectiveType
+from ..constants import EPSILON
+from ..types import ConstraintType, Matrix, ObjectiveType
+from .xlsx_tableau_repo import save_original_tableau_excel
 
 if TYPE_CHECKING:
-    from .problem import LinearProgram
+    from ..problem import LinearProgram
 
 
 @dataclass
