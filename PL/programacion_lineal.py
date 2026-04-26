@@ -96,76 +96,92 @@ def es_factible(punto, restricciones):
 
 
 def calcular_vertices(restricciones):
-    all_vertices, factibles, checked = [], [], set()  # set para evitar duplicados
-    hull = []  # region factible
-    lineas = [(r[0], r[1], r[2]) for r in restricciones]  # extraer Ec.
+    all_v, factibles, seen = [], [], set()
+    hull = []
+    lineas = [(a, b, c) for a, b, c, _ in restricciones]
 
-    for i, l1 in enumerate(lineas):  # enumeracion index * recta
-        for l2 in lineas[i + 1 :]:  # pares de rectas
-            p = calcular_interseccion(l1, l2)  # interseccion entre l1 y l2
-
+    for i, l1 in enumerate(lineas):
+        for l2 in lineas[i + 1 :]:
+            p = calcular_interseccion(l1, l2)
             if p is None:
                 continue
 
-            px, py = normalizar(p[0]), normalizar(p[1])  # normalizar coordenadas
-
+            px, py = map(normalizar, p)
             key = (round(px, 6), round(py, 6))
-            if key in checked:
+
+            if key in seen:
                 continue
 
-            # actualizacion
-            checked.add(key)
-            all_vertices.append((px, py))
+            seen.add(key)
+            all_v.append((px, py))
 
-            # verificar factibilidad
             if es_factible((px, py), restricciones):
                 factibles.append((px, py))
+                hull = (
+                    convex_hull(factibles) if len(factibles) >= 3 else factibles.copy()
+                )
 
-                # recalcular el hull con el nuevo vertice, con sentido
-                if len(factibles) >= 3:
-                    hull = convex_hull(factibles)
-                else:
-                    hull = factibles.copy()
-
-    return all_vertices, factibles, hull
+    return all_v, factibles, hull
 
 
 def evaluar_objetivo(vertices, a, b):  # evaluar Z con ciertos vertices
     return [(v, a * v[0] + b * v[1]) for v in vertices]  # retorna tuplas -> ((x,y), Z)
 
 
-def no_acotado(hull, a_obj, b_obj):
+def no_acotado(hull, a, b):
     if len(hull) < 3:
         return True
 
-    direccion = np.array([a_obj, b_obj], dtype=float)
-    direccion = direccion / (norm(direccion) + EPS)
+    d = np.array([a, b], float)
+    d /= norm(d) + EPS
 
-    for i in range(len(hull)):
-        p1 = np.array(hull[i])
-        p2 = np.array(hull[(i + 1) % len(hull)])
-
-        edge = p2 - p1
-
+    for p1, p2 in zip(hull, hull[1:] + [hull[0]]):
+        edge = np.subtract(p2, p1)
         normal = np.array([-edge[1], edge[0]])
-        normal = normal / (norm(normal) + EPS)
+        normal /= norm(normal) + EPS
 
-        # si TODAS las normales tienen producto positivo → está cerrado
-        if np.dot(normal, direccion) > EPS:
-            return False  # está bloqueado → acotado
+        if np.dot(normal, d) > EPS:
+            return False
 
-    return True  # ninguna bloquea → no acotado
+    return True
+
+
+def clasificar_hull(hull, a_obj, b_obj):
+    n = len(hull)
+
+    if n == 0:
+        return "infactible"
+
+    if abs(a_obj) < EPS and abs(b_obj) < EPS:
+        raise ValueError("Función objetivo inválida")
+
+    if n < 3:
+        return {
+            1: "optimo_degenerado_punto",
+            2: "optimo_degenerado_segmento",
+        }[n]
+
+    area = abs(
+        sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(hull, hull[1:] + [hull[0]]))
+    )
+    if area < EPS:
+        return "degenerado"
+
+    if no_acotado(hull, a_obj, b_obj):
+        return "no_acotado"
+
+    return "optimo"
 
 
 # solver
 def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
-
-    all_vertices, vertices, hull = calcular_vertices(restricciones)
+    all_v, _, hull = calcular_vertices(restricciones)
     resultados = evaluar_objetivo(hull, a_obj, b_obj)
+    estado = clasificar_hull(hull, a_obj, b_obj)
 
-    solucion = {
-        "estado": None,
-        "all_vertices": all_vertices,
+    sol = {
+        "estado": estado,
+        "all_vertices": all_v,
         "vertices_factibles": hull,
         "hull": hull,
         "resultados": resultados,
@@ -175,50 +191,16 @@ def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
         "valor_optimo": None,
     }
 
-    if len(hull) == 0:
-        solucion["estado"] = "infactible"
-        return solucion
-
-    if abs(a_obj) < EPS and abs(b_obj) < EPS:
-        raise ValueError("Función objetivo inválida")
-
-    if len(hull) == 1:
-        solucion["estado"] = "optimo_degenerado_punto"
-        return solucion
-
-    if len(hull) == 2:
-        solucion["estado"] = "optimo_degenerado_segmento"
-        return solucion
-
-    if len(hull) >= 3:
-        area = sum(
-            hull[i][0] * hull[(i + 1) % len(hull)][1]
-            - hull[(i + 1) % len(hull)][0] * hull[i][1]
-            for i in range(len(hull))
+    if estado == "optimo":
+        opt = (
+            max(resultados, key=lambda r: r[1])
+            if tipo == "max"
+            else min(resultados, key=lambda r: r[1])
         )
-        if abs(area) < EPS:
-            solucion["estado"] = "degenerado"
-            return solucion
+        sol["optimo"] = opt
+        sol["valor_optimo"] = opt[1]
 
-    if no_acotado(hull, a_obj, b_obj):
-        solucion["estado"] = "no_acotado"
-        return solucion
-
-    optimo = (
-        max(resultados, key=lambda r: r[1])
-        if tipo == "max"
-        else min(resultados, key=lambda r: r[1])
-    )
-
-    solucion.update(
-        {
-            "estado": "optimo",
-            "optimo": optimo,
-            "valor_optimo": optimo[1],
-        }
-    )
-
-    return solucion
+    return sol
 
 
 MENSAJES_ESTADO = {
@@ -260,12 +242,17 @@ def fmt_num(x, sci_thresh=1e4):
 
 def fmt_objetivo(a, b):
     terms = []
-    if abs(a) > EPS:
-        terms.append(f"{fmt_num(a)}x")
 
-    if abs(b) > EPS:
-        sign = "+" if b > 0 and terms else ""
-        terms.append(f"{sign}{fmt_num(b)}y" if b > 0 else f"-{fmt_num(abs(b))}y")
+    for coef, var in ((a, "x"), (b, "y")):
+        if abs(coef) < EPS:
+            continue
+
+        s = fmt_num(abs(coef)) + var
+
+        if not terms:
+            terms.append(s if coef > 0 else f"-{s}")
+        else:
+            terms.append(f"+ {s}" if coef > 0 else f"- {s}")
 
     return " ".join(terms) if terms else "0"
 
@@ -291,9 +278,8 @@ def calcular_limites(vertices, margen_rel=0.05):
     dx = xmax - xmin
     dy = ymax - ymin
 
-    # evitar colapso cuando dx o dy = 0
-    dx = dx if dx > EPS else max(abs(xmax), 1.0)
-    dy = dy if dy > EPS else max(abs(ymax), 1.0)
+    dx = dx or max(abs(xmax), 1.0)
+    dy = dy or max(abs(ymax), 1.0)
 
     mx = dx * margen_rel
     my = dy * margen_rel
@@ -427,7 +413,7 @@ def graficar_Z(ax, resultados, a, b, limites, optimo):
             # evitar dibujar lineas gigantes
             mask = (y_vals >= ymin - 1) & (y_vals <= ymax + 1)
 
-            if any(mask):
+            if mask.any():
                 ax.plot(
                     x_vals[mask],
                     y_vals[mask],
@@ -510,14 +496,15 @@ def graficar(solucion, restricciones):
     plt.show()
 
 
-restricciones = [
-    (1, 0, 0, ">="),
-    (0, 1, 0, ">="),
-    (1, 1, 1e9, "<="),
-]
+# restricciones = [
+#    (1, 0, 0, ">="),
+#    (0, 1, 0, ">="),
+#    (1, 1, 10, "<="),
+#    (1, 1, 10, ">="),  # colapsa a una recta
+# ]
 
-solucion = resolver_PL(restricciones, a_obj=1e6, b_obj=1e6, tipo="max")
-graficar(solucion, restricciones)
+# solucion = resolver_PL(restricciones, a_obj=1, b_obj=1, tipo="max")
+# graficar(solucion, restricciones)
 
 
 """DEBE CONTENER INPUT NATURAL PARA PROBLEMAS DE PROGRAMACION wswsLINEAL"""
