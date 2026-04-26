@@ -8,3 +8,6 @@ __pycache__/
 *.pyo
 *.pyd
 */venv
+
+# Archivos Excel generados por el solver Simplex
+metodo_simplex/simplex/tableado/**/*.xlsx

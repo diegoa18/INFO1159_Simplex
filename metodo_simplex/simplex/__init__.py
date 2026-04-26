@@ -9,7 +9,7 @@ from .exceptions import (
 )
 from .pivot import pivot
 from .problem import LinearProgram
-from .simplex_solver import (
+from .algoritmo.simplex_solver import (
     choose_entering,
     choose_leaving,
 )
