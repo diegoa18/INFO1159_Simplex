@@ -66,12 +66,7 @@ def print_tableau(
 
         for j in ordered_cols:
             val = tableau.data[i, j]
-
-            if pivot_row == i and pivot_col == j:
-                formatted = format_number(val, col_width)
-                row_str += f"[{formatted}]"
-            else:
-                row_str += format_number(val, col_width).rjust(col_width)
+            row_str += format_number(val, col_width).rjust(col_width)
 
         row_str += format_number(tableau.data[i, -1], col_width).rjust(col_width)
         print(row_str)
