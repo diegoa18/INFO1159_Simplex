@@ -9,15 +9,13 @@ from .exceptions import (
 )
 from .pivot import pivot
 from .problem import LinearProgram
-from .simplex_solver import (
-    Solution,
+from .algoritmo.simplex_solver import (
     choose_entering,
     choose_leaving,
-    extract,
-    print_tableau,
-    solve,
 )
-from .tableau import Tableau
+from .solve import solve
+from .solution import Solution
+from .tableado.tableau import Tableau
 from .types import (
     BasicIndices,
     ConstraintRelations,
@@ -48,8 +46,6 @@ __all__ = [  # ->interfaz paquete
     "pivot",
     "solve",
     "Solution",
-    "print_tableau",
     "choose_entering",
     "choose_leaving",
-    "extract",
 ]
