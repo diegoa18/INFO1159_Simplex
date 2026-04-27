@@ -5,6 +5,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..exceptions import (
+    ExcelDataError,
+    ExcelFileNotFoundError,
+)
 from ..printer_tableau import format_number_scientific
 
 
@@ -153,27 +157,22 @@ def save_iteration_tableau_excel(
 
 
 def _parse_formatted_number(value: str | float) -> float:
-    """
-    Convierte un valor formateado (con notación 10^n) de vuelta a float.
-    Ej: "1.2×10^6" → 1200000.0
-    """
     if isinstance(value, (int, float)):
         return float(value)
 
     value_str = str(value).strip()
 
-    # Si contiene el símbolo ×10^, es notación científica personalizada
     if "×10^" in value_str:
         try:
-            parts = value_str.split("×10^")
-            mantisa = float(parts[0])
-            exponente = int(parts[1])
-            return mantisa * (10 ** exponente)
-        except (ValueError, IndexError):
-            return float(value_str)
+            mantisa, exponente = value_str.split("×10^")
+            return float(mantisa) * (10 ** int(exponente))
+        except (ValueError, TypeError):
+            raise ExcelDataError.invalid_numeric(value_str)
 
-    # Si es un número normal
-    return float(value_str)
+    try:
+        return float(value_str)
+    except ValueError as error:
+        raise ExcelDataError.invalid_numeric(value_str) from error
 
 
 def cargar_matriz_desde_excel(
@@ -183,16 +182,14 @@ def cargar_matriz_desde_excel(
     # esta funcion lee la tabla desde excel y devuelve solo la matriz numerica
     ruta_excel = _ruta_excel()
     if not ruta_excel.exists():
-        raise FileNotFoundError(f"no existe el archivo: {ruta_excel}")
+        raise ExcelFileNotFoundError.from_path(ruta_excel)
 
     tabla_excel = pd.read_excel(ruta_excel)
     if tabla_excel.empty:
-        raise ValueError("el archivo excel existe pero esta vacio")
+        raise ExcelDataError.empty_file()
 
     if tabla_excel.shape[0] < cantidad_restricciones + 1:
-        raise ValueError(
-            "el excel no tiene suficientes filas para reconstruir la matriz"
-        )
+        raise ExcelDataError.insufficient_rows()
 
     matriz = np.zeros(
         (cantidad_restricciones + 1, total_variables + 1), dtype=np.float64
