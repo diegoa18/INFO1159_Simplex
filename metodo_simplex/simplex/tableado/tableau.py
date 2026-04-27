@@ -7,7 +7,6 @@ import numpy as np
 
 from ..constants import EPSILON
 from ..types import ConstraintType, Matrix, ObjectiveType
-from .xlsx_tableau_repo import save_original_tableau_excel
 
 if TYPE_CHECKING:
     from ..problem import LinearProgram
@@ -177,22 +176,6 @@ class Tableau:
             c if is_minimization else -c
         )
 
-    def zero_basic_in_objective(self) -> None:
-        for i in range(self.num_constraints):
-            col = self.basic_vars[i]
-
-            if col < self.cols - 1:
-                self.data[self.objective_row, col] = 0.0
-
-    def update_objective_rhs(self) -> None:
-        rhs = sum(
-            self.data[self.objective_row, self.basic_vars[i]]
-            * self.data[i, self.rhs_col]
-            for i in range(self.num_constraints)
-            if self.basic_vars[i] < self.num_original_vars
-        )
-        self.data[self.objective_row, self.rhs_col] = -rhs
-
     @property
     def cols(self) -> int:
         return self.data.shape[1]
@@ -200,9 +183,3 @@ class Tableau:
     @property
     def rows(self) -> int:
         return self.data.shape[0]
-
-    def has_artificial_in_basis(self) -> bool:
-        return np.any(
-            (self.basic_vars >= self.artificial_start)
-            & (self.basic_vars < self.artificial_start + self.num_artificial)
-        )

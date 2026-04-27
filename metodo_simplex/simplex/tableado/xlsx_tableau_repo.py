@@ -5,6 +5,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..printer_tableau import format_number_scientific
+
+
 
 def _ruta_excel(nombre_archivo: str = "tabla.xlsx") -> Path:
     # archivo unico donde se va guardando el estado de la tabla
@@ -96,8 +99,8 @@ def _crear_dataframe_tableau(
         [
             "Z",
             -1.0,
-            *matriz_tableau[indice_fila_objetivo, :total_variables].tolist(),
-            float(matriz_tableau[indice_fila_objetivo, -1]),
+            *[format_number_scientific(val) for val in matriz_tableau[indice_fila_objetivo, :total_variables].tolist()],
+            format_number_scientific(float(matriz_tableau[indice_fila_objetivo, -1])),
         ]
     ]
 
@@ -112,8 +115,8 @@ def _crear_dataframe_tableau(
                     cantidad_variables_exceso,
                 ),
                 0.0,
-                *matriz_tableau[indice_fila_restriccion, :total_variables].tolist(),
-                float(matriz_tableau[indice_fila_restriccion, -1]),
+                *[format_number_scientific(val) for val in matriz_tableau[indice_fila_restriccion, :total_variables].tolist()],
+                format_number_scientific(float(matriz_tableau[indice_fila_restriccion, -1])),
             ]
         )
 
@@ -149,6 +152,30 @@ def save_iteration_tableau_excel(
     return ruta_archivo
 
 
+def _parse_formatted_number(value: str | float) -> float:
+    """
+    Convierte un valor formateado (con notación 10^n) de vuelta a float.
+    Ej: "1.2×10^6" → 1200000.0
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    value_str = str(value).strip()
+
+    # Si contiene el símbolo ×10^, es notación científica personalizada
+    if "×10^" in value_str:
+        try:
+            parts = value_str.split("×10^")
+            mantisa = float(parts[0])
+            exponente = int(parts[1])
+            return mantisa * (10 ** exponente)
+        except (ValueError, IndexError):
+            return float(value_str)
+
+    # Si es un número normal
+    return float(value_str)
+
+
 def cargar_matriz_desde_excel(
     total_variables: int,
     cantidad_restricciones: int,
@@ -172,17 +199,19 @@ def cargar_matriz_desde_excel(
     )
 
     # fila 0 de datos en excel corresponde a la fila objetivo Z
-    matriz[cantidad_restricciones, :total_variables] = tabla_excel.iloc[
-        0, 2 : 2 + total_variables
-    ].to_numpy(dtype=np.float64)
-    matriz[cantidad_restricciones, -1] = float(tabla_excel.iloc[0, -1])
+    matriz[cantidad_restricciones, :total_variables] = np.array(
+        [_parse_formatted_number(v) for v in tabla_excel.iloc[0, 2 : 2 + total_variables].tolist()],
+        dtype=np.float64
+    )
+    matriz[cantidad_restricciones, -1] = _parse_formatted_number(tabla_excel.iloc[0, -1])
 
     # desde la fila 1 en excel vienen las restricciones
     for indice_fila in range(cantidad_restricciones):
         fila_excel = tabla_excel.iloc[indice_fila + 1]
-        matriz[indice_fila, :total_variables] = fila_excel.iloc[
-            2 : 2 + total_variables
-        ].to_numpy(dtype=np.float64)
-        matriz[indice_fila, -1] = float(fila_excel.iloc[-1])
+        matriz[indice_fila, :total_variables] = np.array(
+            [_parse_formatted_number(v) for v in fila_excel.iloc[2 : 2 + total_variables].tolist()],
+            dtype=np.float64
+        )
+        matriz[indice_fila, -1] = _parse_formatted_number(fila_excel.iloc[-1])
 
     return matriz

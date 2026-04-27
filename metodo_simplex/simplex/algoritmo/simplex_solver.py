@@ -7,7 +7,7 @@ from ..printer_tableau import print_tableau
 from ..solution import Solution
 from ..tableau_logger import save_initial_tableau, save_iteration, save_final_tableau
 from ..constants import EPSILON, MAX_ITERATIONS
-from ..exceptions import StabilityError, UnboundedError
+from ..exceptions import StabilityError
 from ..pivot import pivot
 from ..problem import LinearProgram
 from ..tableado.tableau import Tableau
