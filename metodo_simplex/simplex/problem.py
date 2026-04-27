@@ -6,26 +6,24 @@ from typing import Optional  # Optional[algo] -> type o None
 import numpy as np
 
 from .exceptions import InvalidLPError
-from .types import ConstraintRelations, ConstraintType, Matrix, ObjectiveType, Vector
+from .types import Tupla, ConstraintType, Matriz, ObjectiveType, Tupla
 
 # representacion formal LP, antess de ir al solver pues
 # RECORDAR QUE LP => max/min (c^T)*x, sujeto a: Ax (<=,>=,=) b; x >= 0
-
-
 @dataclass(frozen=True)
 class LinearProgram:
-    A: Matrix
-    b: Vector
-    c: Vector
-    constraints: ConstraintRelations  # tipo desigualdad
+    A: Matriz # restricciones
+    b: Matriz # lado derecho
+    c: Matriz # coeficientes  
+    constraints: Tupla  # tipo desigualdad
     objective: ObjectiveType  # MAX/MIN
 
     def __init__(
         self,
-        A: Matrix,
-        b: Vector,
-        c: Vector,
-        constraints: Optional[ConstraintRelations] = None,
+        A: Matriz,
+        b: Matriz,
+        c: Matriz,
+        constraints: Optional[Tupla] = None,
         objective: ObjectiveType = ObjectiveType.MAX,  # max default
     ) -> None:
         if constraints is None:
@@ -76,3 +74,10 @@ class LinearProgram:
     @property
     def n(self) -> int:
         return self.A.shape[1]
+
+@dataclass(frozen=True)
+class Solution:
+    optimal_value: float
+    variables: tuple[float, ...]  # vector solucion
+    is_optimal: bool
+    iterations: int

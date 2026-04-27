@@ -3,10 +3,9 @@ from __future__ import annotations
 import numpy as np
 
 # SIEMPRE SE BUSCA [[0],[0],[1],[0],[O]], osea un solo 1 en la columna
-from .constants import EPSILON
+from .types import EPSILON
 from .exceptions import PivotError
-from .tableado.xlsx_tableau_repo import cargar_matriz_desde_excel
-from .tableado.tableau import Tableau
+from .tableau import Tableau
 
 
 def pivot(
@@ -22,11 +21,7 @@ def pivot(
         + tableau.num_artificial
     )
 
-    # se toma como fuente la matriz guardada en el excel; si no existe, usa la actual
-    try:
-        data = cargar_matriz_desde_excel(total_vars, tableau.num_constraints)
-    except (FileNotFoundError, ValueError):
-        data = tableau.data.copy()
+    data = tableau.data.copy()
 
     pivot_val = data[pivot_row, pivot_col]
 

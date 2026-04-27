@@ -5,16 +5,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..constants import EPSILON
-from ..types import ConstraintType, Matrix, ObjectiveType
+from .types import ConstraintType, Matriz, ObjectiveType, EPSILON
 
 if TYPE_CHECKING:
-    from ..problem import LinearProgram
+    from .problem import LinearProgram
 
 
 @dataclass
 class Tableau:
-    data: Matrix
+    data: Matriz
     basic_vars: np.ndarray
     nonbasic_vars: np.ndarray
     num_original_vars: int
@@ -132,7 +131,7 @@ class Tableau:
             return f"x{var_index + 1}"
 
         elif var_index < self.num_original_vars + self.num_slack:
-            return f"s{var_index - self.num_original_vars + 1}"
+            return f"h{var_index - self.num_original_vars + 1}"
 
         elif var_index < self.artificial_start:
             return f"e{var_index - self.num_original_vars - self.num_slack + 1}"
