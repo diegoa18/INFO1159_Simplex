@@ -84,11 +84,11 @@ def _parse_constraint_line(raw: str, n: int, variables_sympy):
     lado_derecho = _parse_real_finite_number(tokens[-1])
 
     lhs_expr = sum(coeficientes_raw[i] * variables_sympy[i] for i in range(n))
-    matrix, rhs = linear_eq_to_matrix([Eq(lhs_expr, lado_derecho)], variables_sympy)
+    matrix, rigth = linear_eq_to_matrix([Eq(lhs_expr, lado_derecho)], variables_sympy)
 
     coeffs = np.array([float(v) for v in matrix.tolist()[0]], dtype=np.float64)
-    rhs_value = float(rhs[0])
-    return coeffs, rhs_value, relation_map[relation_symbol]
+    rigth_value = float(rigth[0])
+    return coeffs, rigth_value, relation_map[relation_symbol]
 
 
 def _build_objective_vector(coeficientes_raw: np.ndarray, variables_sympy) -> np.ndarray:

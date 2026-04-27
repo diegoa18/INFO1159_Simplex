@@ -79,27 +79,3 @@ class InputFormatError(InputParserError):
         return cls(
             f"Formato invalido. Use: a1 a2 ... a{expected_coeffs} {relation_symbol} b"
         )
-
-
-class ExcelReadError(LPError):
-    pass
-
-
-class ExcelFileNotFoundError(ExcelReadError):
-    @classmethod
-    def from_path(cls, path: Path) -> ExcelFileNotFoundError:
-        return cls(f"no existe el archivo: {path}")
-
-
-class ExcelDataError(ExcelReadError):
-    @classmethod
-    def invalid_numeric(cls, value: str) -> ExcelDataError:
-        return cls(f"valor numerico invalido en excel: '{value}'")
-
-    @classmethod
-    def empty_file(cls) -> ExcelDataError:
-        return cls("el archivo excel existe pero esta vacio")
-
-    @classmethod
-    def insufficient_rows(cls) -> ExcelDataError:
-        return cls("el excel no tiene suficientes filas para reconstruir la matriz")

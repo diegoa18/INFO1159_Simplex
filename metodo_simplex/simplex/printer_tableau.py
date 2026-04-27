@@ -1,7 +1,7 @@
 from typing import Optional
 import math
 
-from .tableado.tableau import Tableau
+from .tableau import Tableau
 
 
 def format_number_scientific(value: float) -> str:
@@ -11,7 +11,7 @@ def format_number_scientific(value: float) -> str:
     abs_val = abs(value)
 
     # notación de potencia 10^n para números muy grandes o muy pequeños
-    if abs_val >= 1e4 or abs_val < 1e-3:
+    if abs_val >= 1e4 or abs_val < 1e-3:  
         exp = math.floor(math.log10(abs_val))
         mantisa = value / (10 ** exp)
 
@@ -63,6 +63,16 @@ def print_tableau(
     print(header)
     print("-" * len(header))
 
+    # fila Z
+    z_row = tableau.data[tableau.objective_row]
+    row_str = "Z ".ljust(3) + format_number(-1.0, col_width).rjust(col_width)
+
+    for j in ordered_cols:
+        row_str += format_number(z_row[j], col_width).rjust(col_width)
+
+    row_str += format_number(z_row[-1], col_width).rjust(col_width)
+    print(row_str)
+    
     for i in range(m):
         basic_var = int(tableau.basic_vars[i])
         row_str = tableau.var_name(basic_var).ljust(3) + format_number(0.0, col_width).rjust(col_width)
@@ -75,16 +85,6 @@ def print_tableau(
         print(row_str)
 
     print("-" * len(header))
-
-    # fila Z
-    z_row = tableau.data[tableau.objective_row]
-    row_str = "Z ".ljust(3) + format_number(-1.0, col_width).rjust(col_width)
-
-    for j in ordered_cols:
-        row_str += format_number(z_row[j], col_width).rjust(col_width)
-
-    row_str += format_number(z_row[-1], col_width).rjust(col_width)
-    print(row_str)
 
     # info pivote
     if pivot_row is not None and pivot_col is not None and leaving_var is not None:

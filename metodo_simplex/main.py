@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from simplex import InfeasibleError, UnboundedError, solve
+from simplex import InfeasibleError, UnboundedError
+from simplex.simplex_solver import SimplexSolver
 from simplex.input_parser import build_problem_from_input
 
 
 def main() -> None:
     problem = build_problem_from_input()
-
+    solver = SimplexSolver(trace=True)
     # RESOLUCION
     try:
-        solution = solve(problem, trace=True)
+        solution = solver.solve(problem)
         print("SOLUCION OPTIMA")
         print("-" * 60)
 
