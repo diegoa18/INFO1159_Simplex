@@ -1,5 +1,3 @@
-from unittest import result
-
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.linalg import norm
@@ -107,7 +105,7 @@ def calcular_vertices(restricciones):
                 continue
 
             px, py = map(normalizar, p)
-            key = (round(px, 6), round(py, 6))
+            key = (px, py)
 
             if key in seen:
                 continue
@@ -173,23 +171,35 @@ def clasificar_hull(hull, a_obj, b_obj):
     return "optimo"
 
 
-# solver
-def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
-    all_v, _, hull = calcular_vertices(restricciones)
-    resultados = evaluar_objetivo(hull, a_obj, b_obj)
-    estado = clasificar_hull(hull, a_obj, b_obj)
-
-    sol = {
+def solucion_base(a_obj, b_obj, tipo, estado):
+    return {
         "estado": estado,
-        "all_vertices": all_v,
-        "vertices_factibles": hull,
-        "hull": hull,
-        "resultados": resultados,
+        "all_vertices": [],
+        "vertices_factibles": [],
+        "hull": [],
+        "resultados": [],
         "coeficientes": (a_obj, b_obj),
         "tipo": tipo,
         "optimo": None,
         "valor_optimo": None,
     }
+
+
+# solver
+def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
+    if not restricciones:
+        return solucion_base(a_obj, b_obj, tipo, "no_acotado")
+
+    all_v, _, hull = calcular_vertices(restricciones)
+    resultados = evaluar_objetivo(hull, a_obj, b_obj)
+    estado = clasificar_hull(hull, a_obj, b_obj)
+
+    sol = solucion_base(a_obj, b_obj, tipo, estado)
+
+    sol["all_vertices"] = all_v
+    sol["vertices_factibles"] = hull
+    sol["hull"] = hull
+    sol["resultados"] = resultados
 
     if estado == "optimo":
         opt = (
@@ -505,6 +515,3 @@ def graficar(solucion, restricciones):
 
 # solucion = resolver_PL(restricciones, a_obj=1, b_obj=1, tipo="max")
 # graficar(solucion, restricciones)
-
-
-"""DEBE CONTENER INPUT NATURAL PARA PROBLEMAS DE PROGRAMACION wswsLINEAL"""
