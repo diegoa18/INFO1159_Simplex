@@ -31,32 +31,89 @@ def pedir_num_restricciones():
 
 
 def parse_restriccion(texto):
+    """
+    Soporta dos formatos:
+    1. Simbólico: "2x + 3y <= 10"
+    2. Coeficientes: "2 3 <= 10"
+    """
+    texto = texto.strip()
+    
+    # Buscar signo de relacion
+    signo = None
+    for s in ("<=", ">=", "<", ">"):
+        if s in texto:
+            signo = s
+            break
+    
+    if not signo:
+        raise ValueError("no se encontró signo válido (<, >, <=, >=)")
+    
+    izq_str, der_str = texto.split(signo)
+    izq_str = izq_str.strip()
+    der_str = der_str.strip()
+    
+    try:
+        c = float(der_str)
+    except ValueError:
+        raise ValueError(f"lado derecho inválido: '{der_str}' no es número")
+    
+    # Detectar formato: si hay 'x' o 'y', es simbólico; si solo números, es coeficientes
+    if "x" in izq_str.lower() or "y" in izq_str.lower():
+        # Formato simbólico: "2x + 3y"
+        a, b = _parse_simbolico(izq_str)
+    else:
+        # Formato coeficientes: "2 3"
+        a, b = _parse_coeficientes(izq_str)
+    
+    return (a, b, c, signo)
+
+
+def _parse_coeficientes(texto):
+    """
+    Parsea formato: "a b" → (a, b)
+    """
+    partes = texto.split()
+    if len(partes) != 2:
+        raise ValueError(f"se esperaban 2 coeficientes, se recibieron {len(partes)}: '{texto}'")
+    
+    try:
+        a = float(partes[0])
+        b = float(partes[1])
+    except ValueError as e:
+        raise ValueError(f"coeficientes inválidos: {e}")
+    
+    return a, b
+
+
+def _parse_simbolico(texto):
+    """
+    Parsea formato: "2x + 3y" o "x - 2y" etc → (a, b)
+    """
     texto = texto.replace(" ", "").lower()
-
-    for signo in ("<=", ">=", "<", ">"):
-        if signo in texto:
-            izq, der = texto.split(signo)
-            c = float(der)
-
-            izq = izq.replace("-", "+-")
-            partes = [p for p in izq.split("+") if p]
-            a, b = 0.0, 0.0
-
-            for p in partes:
-                if "x" in p:
-                    coef = p.replace("x", "")
-                    a = float(coef) if coef not in ("", "+") else 1.0
-                    if coef == "-":
-                        a = -1.0
-                elif "y" in p:
-                    coef = p.replace("y", "")
-                    b = float(coef) if coef not in ("", "+") else 1.0
-                    if coef == "-":
-                        b = -1.0
-
-            return (a, b, c, signo)
-
-    raise ValueError("no se encontró signo válido")
+    texto = texto.replace("-", "+-")
+    partes = [p for p in texto.split("+") if p]
+    
+    a, b = 0.0, 0.0
+    
+    for p in partes:
+        if "x" in p:
+            coef = p.replace("x", "")
+            if coef in ("", "+"):
+                a = 1.0
+            elif coef == "-":
+                a = -1.0
+            else:
+                a = float(coef)
+        elif "y" in p:
+            coef = p.replace("y", "")
+            if coef in ("", "+"):
+                b = 1.0
+            elif coef == "-":
+                b = -1.0
+            else:
+                b = float(coef)
+    
+    return a, b
 
 
 def pedir_restricciones(n):

@@ -235,283 +235,165 @@ def manejar_estado(solucion):
 
 # VISUALIZACION
 
+# === CONFIGURACIÓN DE GRÁFICOS (solo valores hardcodeados) ===
+TAMANO_GRAFICO = (12, 10)
+MARGEN_RELATIVO_GRAFICO = 0.05
+PUNTOS_RECTA_VERTICAL = 3
+PUNTOS_RECTA_HORIZONTAL = 400
+MARGEN_LINEAS_Z = 1  # margen en y para no dibujar líneas gigantes
+UMBRAL_NOTACION_CIENTIFICA_POR_DEFECTO = 1e4
+UMBRAL_NOTACION_CIENTIFICA_OBJETIVO = 1e8
+UMBRAL_DECIMAL_PEQUENO = 1e-4
 
-def fmt_num(x, sci_thresh=1e4):
-    if x == 0:
+
+def fmt_num(numero, umbral_notacion_cientifica=None):
+    if umbral_notacion_cientifica is None:
+        umbral_notacion_cientifica = UMBRAL_NOTACION_CIENTIFICA_POR_DEFECTO
+    if numero == 0:
         return "0"
-
-    ax = abs(x)
-
-    if ax >= sci_thresh or ax <= 1e-4:
-        return f"{x:.2e}"
-    elif abs(x - int(x)) < EPS:
-        return f"{int(x)}"
+    valor_absoluto = abs(numero)
+    if valor_absoluto >= umbral_notacion_cientifica or valor_absoluto <= UMBRAL_DECIMAL_PEQUENO:
+        return f"{numero:.2e}"
+    elif abs(numero - int(numero)) < EPS:
+        return f"{int(numero)}"
     else:
-        return f"{x:.2f}"
+        return f"{numero:.2f}"
 
 
-def fmt_objetivo(a, b):
-    terms = []
-
-    for coef, var in ((a, "x"), (b, "y")):
-        if abs(coef) < EPS:
+def fmt_objetivo(coeficiente_x, coeficiente_y):
+    terminos = []
+    for coeficiente, variable in ((coeficiente_x, "x"), (coeficiente_y, "y")):
+        if abs(coeficiente) < EPS:
             continue
-
-        s = fmt_num(abs(coef)) + var
-
-        if not terms:
-            terms.append(s if coef > 0 else f"-{s}")
-        else:
-            terms.append(f"+ {s}" if coef > 0 else f"- {s}")
-
-    return " ".join(terms) if terms else "0"
+        termino = fmt_num(abs(coeficiente), umbral_notacion_cientifica=UMBRAL_NOTACION_CIENTIFICA_OBJETIVO) + variable
+        terminos.append((termino if coeficiente > 0 else f"-{termino}") if not terminos else (f"+ {termino}" if coeficiente > 0 else f"- {termino}"))
+    return " ".join(terminos) if terminos else "0"
 
 
 def construir_titulo(solucion):
-    (x, y), z = solucion["optimo"]
-    a, b = solucion["coeficientes"]
-
-    expr = fmt_objetivo(a, b)
-
-    return f"Z = {expr}  |  en ({fmt_num(x)}, {fmt_num(y)}) → Z = {fmt_num(z)}"
+    (coordenada_x, coordenada_y), valor_optimo = solucion["optimo"]
+    coeficiente_x, coeficiente_y = solucion["coeficientes"]
+    expresion_objetivo = fmt_objetivo(coeficiente_x, coeficiente_y)
+    return f"Z = {expresion_objetivo}  |  en ({fmt_num(coordenada_x, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}, {fmt_num(coordenada_y, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}) → Z = {fmt_num(valor_optimo, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}"
 
 
-def calcular_limites(vertices, margen_rel=0.05):
+def calcular_limites(vertices, margen_relativo=None):
+    margen_relativo = margen_relativo or MARGEN_RELATIVO_GRAFICO
     if not vertices:
         return -10, 10, -10, 10
-
-    vx, vy = zip(*vertices)
-
-    xmin, xmax = min(vx), max(vx)
-    ymin, ymax = min(vy), max(vy)
-
-    dx = xmax - xmin
-    dy = ymax - ymin
-
-    dx = dx or max(abs(xmax), 1.0)
-    dy = dy or max(abs(ymax), 1.0)
-
-    mx = dx * margen_rel
-    my = dy * margen_rel
-
-    return xmin - mx, xmax + mx, ymin - my, ymax + my
+    coordenadas_x, coordenadas_y = zip(*vertices)
+    xmin, xmax, ymin, ymax = min(coordenadas_x), max(coordenadas_x), min(coordenadas_y), max(coordenadas_y)
+    dx = (xmax - xmin) or max(abs(xmax), 1.0)
+    dy = (ymax - ymin) or max(abs(ymax), 1.0)
+    margen_x, margen_y = dx * margen_relativo, dy * margen_relativo
+    return xmin - margen_x, xmax + margen_x, ymin - margen_y, ymax + margen_y
 
 
-def puntos_recta(r, xmin, xmax, ymin, ymax):
-    a, b, c, _ = r  # r -> recta
+def puntos_recta(restriccion, xmin, xmax, ymin, ymax):
+    coeficiente_x, coeficiente_y, termino_independiente, _ = restriccion
 
-    if abs(b) < EPS:
-        return [
-            (c / a, y) for y in np.linspace(ymin, ymax, 3)
-        ]  # verticalidad, con 3 puntos es suficiente
+    if abs(coeficiente_y) < EPS:
+        return [(termino_independiente / coeficiente_x, coordenada_y) for coordenada_y in np.linspace(ymin, ymax, PUNTOS_RECTA_VERTICAL)]
 
-    xs = np.linspace(xmin, xmax, 400)  # 400 equiespaciados
-    ys = (c - a * xs) / b  # y
+    coordenadas_x = np.linspace(xmin, xmax, PUNTOS_RECTA_HORIZONTAL)
+    coordenadas_y = (termino_independiente - coeficiente_x * coordenadas_x) / coeficiente_y  # y
 
-    return list(
-        zip(xs[np.isfinite(ys)], ys[np.isfinite(ys)])
-    )  # pares (eliminando valores invalidos)
+    return list(zip(coordenadas_x[np.isfinite(coordenadas_y)], coordenadas_y[np.isfinite(coordenadas_y)]))  # pares (eliminando valores invalidos)
 
 
-def formatear_restriccion(r):
-    a, b, c, signo = r
-    return f"{parse_num(a)}x {'+' if b >= 0 else '-'}{parse_num(abs(b))}y {signo} {parse_num(c)}"
+def formatear_restriccion(restriccion):
+    coeficiente_x, coeficiente_y, termino_independiente, signo = restriccion
+    return f"{parse_num(coeficiente_x)}x {'+' if coeficiente_y >= 0 else '-'}{parse_num(abs(coeficiente_y))}y {signo} {parse_num(termino_independiente)}"
 
 
-def configurar_ejes(ax, limites):  # limites -> (xmin, xmax, ymin, ymax)
-    ax.set_xlim(limites[:2])
-    ax.set_ylim(limites[2:])
-
-    ax.set_aspect("auto")
-
-    ax.ticklabel_format(style="sci", axis="both", scilimits=(0, 0))
-
-    ax.grid(True, alpha=0.3, linestyle="--")
-    ax.set_xlabel("x", fontsize=11)
-    ax.set_ylabel("y", fontsize=11)
+def configurar_ejes(eje, limites):
+    eje.set_xlim(limites[:2])
+    eje.set_ylim(limites[2:])
+    eje.set_aspect("auto")
+    eje.ticklabel_format(style="sci", axis="both", scilimits=(0, 0))
+    eje.grid(True, alpha=0.3, linestyle="--")
+    eje.set_xlabel("x", fontsize=11)
+    eje.set_ylabel("y", fontsize=11)
 
 
-def graficar_restricciones(ax, restricciones, limites):
-    cmap = plt.colormaps["tab10"]
-
-    for idx, r in enumerate(restricciones):
-        pts = puntos_recta(
-            r, *limites
-        )  # *limites desempaqueta (xmin, xmax, ymin, ymax)
-
-        if not pts:
+def graficar_restricciones(eje, restricciones, limites):
+    mapa_colores = plt.colormaps["tab10"]
+    for indice, restriccion in enumerate(restricciones):
+        puntos = puntos_recta(restriccion, *limites)
+        if not puntos:
             continue
-
-        xs, ys = zip(*pts)  # separacion x e y
-
-        kw = (  # dibujado
-            dict(color="black", linewidth=2.5, alpha=0.9)
-            if es_eje(r)
-            else dict(
-                color=cmap(idx % 10),
-                linestyle="--",
-                linewidth=1.5,
-                alpha=0.8,
-                label=formatear_restriccion(r),
-            )
-        )
-        ax.plot(xs, ys, **kw)
-
-
-def graficar_region(ax, hull):
-    if len(hull) < 3:  # base 3
-        return
-
-    hx, hy = zip(*(hull + [hull[0]]))  # sellado de poligono
-
-    ax.fill(hx, hy, color="lightgreen", alpha=0.3, zorder=1)  # area
-
-    ax.plot(  # borde
-        hx,
-        hy,
-        color="green",
-        linewidth=2.5,
-        alpha=0.9,
-        zorder=2,
-        label="Región Factible",
-    )
-
-
-def graficar_vertices(ax, all_v, factibles_v, optimo):  # puntos clave
-    factibles_set = set(factibles_v)
-
-    no_factibles = [v for v in all_v if v not in factibles_set]  # no factibles
-
-    if no_factibles:  # no factible
-        vx, vy = zip(*no_factibles)
-        ax.scatter(
-            vx, vy, c="gray", s=50, alpha=0.8, zorder=3, label="Vértices no factibles"
-        )
-
-    for v in factibles_v:  # optimo
-        if optimo is not None and v == optimo[0]:
-            ax.scatter(
-                *v,
-                c="gold",
-                s=300,
-                zorder=8,
-                edgecolors="orange",
-                linewidths=2,
-                marker="*",
-                label="Óptimo",
-            )
-
-        else:  # factibles
-            ax.scatter(*v, c="red", s=80, zorder=5, edgecolors="darkred")
-
-
-def graficar_Z(ax, resultados, a, b, limites, optimo):
-
-    xmin, xmax, ymin, ymax = limites
-
-    x_vals = np.linspace(xmin, xmax, 200)
-
-    for v, z in resultados:
-        es_opt = v == optimo[0]
-        color, lw, alpha, ls = (
-            ("blue", 2.5, 1.0, "-") if es_opt else ("steelblue", 1.2, 0.4, "--")
-        )
-        zorder = 6 if es_opt else 4
-
-        if abs(b) > EPS:
-            y_vals = (z - a * x_vals) / b
-            # evitar dibujar lineas gigantes
-            mask = (y_vals >= ymin - 1) & (y_vals <= ymax + 1)
-
-            if mask.any():
-                ax.plot(
-                    x_vals[mask],
-                    y_vals[mask],
-                    color=color,
-                    lw=lw,
-                    alpha=alpha,
-                    ls=ls,
-                    zorder=zorder,
-                )
+        coordenadas_x, coordenadas_y = zip(*puntos)
+        if es_eje(restriccion):
+            eje.plot(coordenadas_x, coordenadas_y, color="black", linewidth=2.5, alpha=0.9)
         else:
-            ax.plot(
-                [z / a] * 2,
-                [ymin, ymax],
-                color=color,
-                lw=lw,
-                alpha=alpha,
-                ls=ls,
-                zorder=zorder,
-            )
+            eje.plot(coordenadas_x, coordenadas_y, color=mapa_colores(indice % 10), linestyle="--", linewidth=1.5, alpha=0.8, label=formatear_restriccion(restriccion))
 
 
-def graficar_etiquetas(ax, resultados, optimo):
-    for v, z in resultados:
-        es_opt = v == optimo[0]
-        ax.annotate(
-            f"Z = {fmt_num(z)}",
-            v,
-            textcoords="offset points",
-            xytext=(8, 8),
-            fontsize=9 if es_opt else 8,
-            color="darkgreen" if es_opt else "dimgray",
-            fontweight="bold" if es_opt else "normal",
-            bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7),
-            zorder=7,
-        )
+def graficar_region(eje, hull):
+    if len(hull) < 3:
+        return
+    coordenadas_x, coordenadas_y = zip(*(hull + [hull[0]]))
+    eje.fill(coordenadas_x, coordenadas_y, color="lightgreen", alpha=0.3, zorder=1)
+    eje.plot(coordenadas_x, coordenadas_y, color="green", linewidth=2.5, alpha=0.9, zorder=2, label="Región Factible")
+
+
+def graficar_vertices(eje, vertices_totales, vertices_factibles, optimo):
+    conjunto_factibles = set(vertices_factibles)
+    vertices_no_factibles = [vertice for vertice in vertices_totales if vertice not in conjunto_factibles]
+    if vertices_no_factibles:
+        coordenadas_x, coordenadas_y = zip(*vertices_no_factibles)
+        eje.scatter(coordenadas_x, coordenadas_y, c="gray", s=50, alpha=0.8, zorder=3, label="Vértices no factibles")
+    for vertice in vertices_factibles:
+        if optimo is not None and vertice == optimo[0]:
+            eje.scatter(*vertice, c="gold", s=300, zorder=8, edgecolors="orange", linewidths=2, marker="*", label="Óptimo")
+        else:
+            eje.scatter(*vertice, c="red", s=80, zorder=5, edgecolors="darkred")
+
+
+def graficar_Z(eje, resultados, coeficiente_x, coeficiente_y, limites, optimo):
+    xmin, xmax, ymin, ymax = limites
+    valores_x = np.linspace(xmin, xmax, 200)
+    for vertice, valor_z in resultados:
+        es_optimo = vertice == optimo[0]
+        color = "blue" if es_optimo else "steelblue"
+        estilo_linea = "-" if es_optimo else "--"
+        ancho_linea = 2.5 if es_optimo else 1.2
+        transparencia = 1.0 if es_optimo else 0.4
+        profundidad = 6 if es_optimo else 4
+        if abs(coeficiente_y) > EPS:
+            valores_y = (valor_z - coeficiente_x * valores_x) / coeficiente_y
+            mascara = (valores_y >= ymin - MARGEN_LINEAS_Z) & (valores_y <= ymax + MARGEN_LINEAS_Z)
+            if mascara.any():
+                eje.plot(valores_x[mascara], valores_y[mascara], color=color, linewidth=ancho_linea, alpha=transparencia, linestyle=estilo_linea, zorder=profundidad)
+        else:
+            eje.plot([valor_z / coeficiente_x] * 2, [ymin, ymax], color=color, linewidth=ancho_linea, alpha=transparencia, linestyle=estilo_linea, zorder=profundidad)
+
+
+def graficar_etiquetas(eje, resultados, optimo):
+    for vertice, valor_z in resultados:
+        es_optimo = vertice == optimo[0]
+        eje.annotate(f"Z = {fmt_num(valor_z, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}", vertice, textcoords="offset points", xytext=(8, 8), fontsize=(9 if es_optimo else 8), color=("darkgreen" if es_optimo else "dimgray"), fontweight=("bold" if es_optimo else "normal"), bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7), zorder=7)
 
 
 def graficar(solucion, restricciones):
-
     if not manejar_estado(solucion):
         return
-
-    fig, ax = plt.subplots(figsize=(12, 10))
-
+    figura, eje = plt.subplots(figsize=TAMANO_GRAFICO)
     hull = solucion["hull"]
     limites = calcular_limites(hull or [(0, 0)])
-
-    configurar_ejes(ax, limites)
-    graficar_restricciones(ax, restricciones, limites)
-    graficar_region(ax, hull)
-
+    configurar_ejes(eje, limites)
+    graficar_restricciones(eje, restricciones, limites)
+    graficar_region(eje, hull)
     optimo = solucion["optimo"]
-
-    graficar_vertices(
-        ax,
-        solucion["all_vertices"],
-        solucion["vertices_factibles"],
-        optimo,
-    )
-
+    graficar_vertices(eje, solucion["all_vertices"], solucion["vertices_factibles"], optimo)
     if optimo:
-        graficar_Z(
-            ax,
-            solucion["resultados"],
-            *solucion["coeficientes"],
-            limites,
-            optimo,
-        )
-        graficar_etiquetas(ax, solucion["resultados"], optimo)
+        graficar_Z(eje, solucion["resultados"], *solucion["coeficientes"], limites, optimo)
+        graficar_etiquetas(eje, solucion["resultados"], optimo)
         titulo = construir_titulo(solucion)
     else:
         titulo = "Problema no acotado"
-
-    ax.set_title(titulo, fontsize=14, fontweight="bold", pad=12)
-
-    loc = "best" if len(hull) > 3 else "upper right"
-    ax.legend(loc=loc, fontsize=9, framealpha=0.9).set_zorder(100)
-
+    eje.set_title(titulo, fontsize=14, fontweight="bold", pad=12)
+    ubicacion_leyenda = "best" if len(hull) > 3 else "upper right"
+    eje.legend(loc=ubicacion_leyenda, fontsize=9, framealpha=0.9).set_zorder(100)
     plt.tight_layout()
     plt.show()
-
-
-# restricciones = [
-#    (1, 0, 0, ">="),
-#    (0, 1, 0, ">="),
-#    (1, 1, 10, "<="),
-#    (1, 1, 10, ">="),  # colapsa a una recta
-# ]
-
-# solucion = resolver_PL(restricciones, a_obj=1, b_obj=1, tipo="max")
-# graficar(solucion, restricciones)
