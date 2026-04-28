@@ -10,3 +10,4 @@ __pycache__/
 */venv
 
 metodo_simplex/simplex/tableado/**/*.xlsx
+/archivos_txt

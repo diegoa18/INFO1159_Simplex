@@ -10,8 +10,8 @@ from .exceptions import (
 from .pivot import pivot
 from .problem import LinearProgram, Solution
 from .simplex_solver import (
-    choose_entering,
-    choose_leaving,
+    quien_entra,
+    quien_sale,
 )
 from .tableau import Tableau
 from .types import (
@@ -41,6 +41,6 @@ __all__ = [  # ->interfaz paquete
     "pivot",
     "solve",
     "Solution",
-    "choose_entering",
-    "choose_leaving",
+    "quien_entra",
+    "quien_sale",
 ]
