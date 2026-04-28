@@ -38,21 +38,21 @@ def print_tableau(
     leaving_var: Optional[int] = None,
 ) -> None:
 
-    m = tableau.num_constraints
+    m = tableau.num_restricciones
 
     # encabezado de iteración (solo simplex)
     if iteration is not None:
         print(f"Iteración {iteration}\n")
 
     ordered_cols = (
-        list(tableau.original_range)
-        + list(tableau.surplus_range)
-        + list(tableau.artificial_range)
-        + list(tableau.slack_range)
+        list(tableau.rango_originales)
+        + list(tableau.rango_excesos)
+        + list(tableau.rango_artificiales)
+        + list(tableau.rango_holguras)
     )
 
     col_width = 12
-    name_map = {j: tableau.var_name(j) for j in ordered_cols}
+    name_map = {j: tableau.nombre_variable(j) for j in ordered_cols}
 
     header = "VB".ljust(3) + "Z".center(col_width)
 
@@ -64,7 +64,7 @@ def print_tableau(
     print("-" * len(header))
 
     # fila Z
-    z_row = tableau.data[tableau.objective_row]
+    z_row = tableau.datos[tableau.fila_objetivo]
     row_str = "Z ".ljust(3) + format_number(-1.0, col_width).rjust(col_width)
 
     for j in ordered_cols:
@@ -74,14 +74,14 @@ def print_tableau(
     print(row_str)
     
     for i in range(m):
-        basic_var = int(tableau.basic_vars[i])
-        row_str = tableau.var_name(basic_var).ljust(3) + format_number(0.0, col_width).rjust(col_width)
+        basic_var = int(tableau.variables_basicas[i])
+        row_str = tableau.nombre_variable(basic_var).ljust(3) + format_number(0.0, col_width).rjust(col_width)
 
         for j in ordered_cols:
-            val = tableau.data[i, j]
+            val = tableau.datos[i, j]
             row_str += format_number(val, col_width).rjust(col_width)
 
-        row_str += format_number(tableau.data[i, -1], col_width).rjust(col_width)
+        row_str += format_number(tableau.datos[i, -1], col_width).rjust(col_width)
         print(row_str)
 
     print("-" * len(header))
@@ -89,7 +89,7 @@ def print_tableau(
     # info pivote
     if pivot_row is not None and pivot_col is not None and leaving_var is not None:
         print()
-        entering = name_map.get(pivot_col, tableau.var_name(pivot_col))
-        print(f"entra {entering}, sale {tableau.var_name(leaving_var)}")
+        entering = name_map.get(pivot_col, tableau.nombre_variable(pivot_col))
+        print(f"entra {entering}, sale {tableau.nombre_variable(leaving_var)}")
 
     print()

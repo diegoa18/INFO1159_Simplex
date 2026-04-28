@@ -15,18 +15,18 @@ class SimplexSolver:
         self.trace = trace
 
     def solve(self, problem: LinearProgram):
-        tableau = Tableau.from_lp(problem)
+        tableau = Tableau.desde_programa_lineal(problem)
 
         is_min = problem.objective == ObjectiveType.MIN
         
-        if len(tableau.artificial_range) > 0:
+        if len(tableau.rango_artificiales) > 0:
             return self.two_phases(tableau, problem, is_min)
         
         return self.standar(tableau, problem, is_min)
 
     def standar(self, tableau, problem, is_min):
         if is_min:
-            tableau.data[tableau.objective_row, :tableau.num_original_vars] = problem.c
+            tableau.datos[tableau.fila_objetivo, :tableau.num_variables_originales] = problem.c
 
         tableau, iterations = simplex_iterate(tableau, trace=self.trace)
 
@@ -38,16 +38,16 @@ class SimplexSolver:
         return Solution(optimal_value, variables, True, iterations)
     
     def two_phases(self, tableau, problem, is_min):
-        z_row = tableau.objective_row
+        z_row = tableau.fila_objetivo
         
-        tableau.data[z_row, :] = 0
-        for j in tableau.artificial_range:
-            tableau.data[z_row, j] = 1.0
+        tableau.datos[z_row, :] = 0
+        for j in tableau.rango_artificiales:
+            tableau.datos[z_row, j] = 1.0
         
-        for i in range(tableau.num_constraints):
-            var_en_base = int(tableau.basic_vars[i])
-            if var_en_base in tableau.artificial_range:
-                tableau.data[z_row, :] -= tableau.data[i, :]
+        for i in range(tableau.num_restricciones):
+            var_en_base = int(tableau.variables_basicas[i])
+            if var_en_base in tableau.rango_artificiales:
+                tableau.datos[z_row, :] -= tableau.datos[i, :]
 
         if self.trace:
             print("\n--- TABLA INICIAL FASE 1 ---")
@@ -55,18 +55,18 @@ class SimplexSolver:
 
         tableau, iter1 = simplex_iterate(tableau, trace=self.trace)
 
-        if abs(tableau.value()) > EPSILON:
-            raise StabilityError(f"Infactible: Z={tableau.value():.4f}")
-        
-        tableau = tableau.remove_artificial_columns()
-        tableau.restore_objective(problem.c, is_min)
+        if abs(tableau.obtener_valor()) > EPSILON:
+            raise StabilityError(f"Infactible: Z={tableau.obtener_valor():.4f}")
 
-        new_z_row = tableau.objective_row
-        for i in range(tableau.num_constraints):
-            var_idx = int(tableau.basic_vars[i])
-            coef_z = tableau.data[new_z_row, var_idx]
+        tableau = tableau.eliminar_columnas_artificiales()
+        tableau.restaurar_objetivo(problem.c, is_min)
+
+        new_z_row = tableau.fila_objetivo
+        for i in range(tableau.num_restricciones):
+            var_idx = int(tableau.variables_basicas[i])
+            coef_z = tableau.datos[new_z_row, var_idx]
             if abs(coef_z) > EPSILON:
-                tableau.data[new_z_row, :] -= coef_z * tableau.data[i, :]
+                tableau.datos[new_z_row, :] -= coef_z * tableau.datos[i, :]
 
         if self.trace:
             print("\n--- TABLA INICIAL FASE 2 ---")
@@ -82,7 +82,7 @@ class SimplexSolver:
         return Solution(optimal_value, variables, True, iter1 + iter2)
 
 def choose_entering(tableau: Tableau, epsilon: float = EPSILON) -> Optional[int]:
-    obj = tableau.data[tableau.objective_row, :-1]
+    obj = tableau.datos[tableau.fila_objetivo, :-1]
     candidates = np.where(obj < -epsilon)[0]
     return int(candidates[0]) if candidates.size else None
 
@@ -93,8 +93,8 @@ def choose_leaving(
     epsilon: float = EPSILON
 ) -> Optional[int]:
 
-    rhs = tableau.data[:-1, -1]
-    col = tableau.data[:-1, pivot_col]
+    rhs = tableau.datos[:-1, -1]
+    col = tableau.datos[:-1, pivot_col]
 
     min_ratio = np.inf
     leaving_row = None
@@ -130,7 +130,7 @@ def simplex_iterate(
         if row is None:
             return tableau, iteration
 
-        leaving = int(tableau.basic_vars[row])
+        leaving = int(tableau.variables_basicas[row])
 
         tableau = pivot(tableau, row, col, epsilon)
 
@@ -146,12 +146,12 @@ def simplex_iterate(
         iteration += 1
 
 def extract(tableau: Tableau):
-    n = tableau.num_original_vars
+    n = tableau.num_variables_originales
     x = np.zeros(n)
 
-    for i in range(tableau.num_constraints):
-        var = int(tableau.basic_vars[i])
+    for i in range(tableau.num_restricciones):
+        var = int(tableau.variables_basicas[i])
         if var < n:
-            x[var] = tableau.data[i, tableau.rhs_col]
+            x[var] = tableau.datos[i, tableau.columna_lado_derecho]
 
-    return tableau.value(), tuple(x)
+    return tableau.obtener_valor(), tuple(x)

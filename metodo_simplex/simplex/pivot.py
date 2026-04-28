@@ -15,13 +15,13 @@ def pivot(
     epsilon: float = EPSILON,
 ) -> Tableau:
     total_vars = (
-        tableau.num_original_vars
-        + tableau.num_slack
-        + tableau.num_surplus
-        + tableau.num_artificial
+        tableau.num_variables_originales
+        + tableau.num_holguras
+        + tableau.num_excesos
+        + tableau.num_artificiales
     )
 
-    data = tableau.data.copy()
+    data = tableau.datos.copy()
 
     pivot_val = data[pivot_row, pivot_col]
 
@@ -43,7 +43,7 @@ def pivot(
             )  # Ri = Ri - factor * Rpivot, para colpivot = 0
 
     # actualizar VB
-    new_basic = tableau.basic_vars.copy()
+    new_basic = tableau.variables_basicas.copy()
     new_basic[pivot_row] = pivot_col  # ej: s1->x1
 
     all_vars = np.arange(total_vars, dtype=np.intp)  # para [0,1,2,..,n]
@@ -51,14 +51,14 @@ def pivot(
     nonbasic = np.setdiff1d(all_vars, new_basic, assume_unique=True)  # todas - VB
 
     nuevo_tableau = Tableau(  # nuevo objeto tableau actualizado
-        data=data,
-        basic_vars=new_basic,
-        nonbasic_vars=nonbasic,
-        num_original_vars=tableau.num_original_vars,
-        num_constraints=tableau.num_constraints,
-        num_slack=tableau.num_slack,
-        num_surplus=tableau.num_surplus,
-        num_artificial=tableau.num_artificial,
+        datos=data,
+        variables_basicas=new_basic,
+        variables_no_basicas=nonbasic,
+        num_variables_originales=tableau.num_variables_originales,
+        num_restricciones=tableau.num_restricciones,
+        num_holguras=tableau.num_holguras,
+        num_excesos=tableau.num_excesos,
+        num_artificiales=tableau.num_artificiales,
     )
 
     return nuevo_tableau
