@@ -25,7 +25,7 @@ def pivot(
 
     data = tableau.datos.copy()
 
-    pivot_val = data[pivot_row, pivot_col]
+    pivot_val = float(data[pivot_row, pivot_col])
 
     if abs(pivot_val) < epsilon:  # pivot != 0
         raise PivotError(f"Pivot value at ({pivot_row}, {pivot_col}) is zero")
@@ -38,11 +38,13 @@ def pivot(
             continue
 
         # coeficiente a pitiar
-        factor = data[i, pivot_col]
+        factor = float(data[i, pivot_col])
         if abs(factor) > epsilon:
             data[i] -= (
                 factor * data[pivot_row]
             )  # Ri = Ri - factor * Rpivot, para colpivot = 0
+
+    data[np.abs(data) < epsilon] = 0.0
 
     # actualizar VB
     new_basic = tableau.variables_basicas.copy()
@@ -51,6 +53,7 @@ def pivot(
     all_vars = np.arange(total_vars, dtype=np.intp)  # para [0,1,2,..,n]
 
     nonbasic = np.setdiff1d(all_vars, new_basic, assume_unique=True)  # todas - VB
+
 
     nuevo_tableau = Tableau(  # nuevo objeto tableau actualizado
         datos=data,
@@ -63,5 +66,5 @@ def pivot(
         num_artificiales=tableau.num_artificiales,
         objective=tableau.objective,
     )
-
+    
     return nuevo_tableau

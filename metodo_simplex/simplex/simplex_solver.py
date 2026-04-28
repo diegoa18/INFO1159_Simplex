@@ -3,11 +3,11 @@ from __future__ import annotations
 import numpy as np
 from typing import Optional
 
-from .exceptions import StabilityError
+from .exceptions import StabilityError, UnboundedError
 from .pivot import pivot
 from .problem import LinearProgram, Solution
 from .tableau import Tableau , print_tableau
-from .types import ObjectiveType, EPSILON
+from .types import ObjectiveType, EPSILON, MAX_ITERATIONS
 
 class SimplexSolver:
     def __init__(self, trazo: bool = False):
@@ -99,8 +99,13 @@ class SimplexSolver:
 # ve la fila de la función objetivo para encontrar la variable que entra
 def quien_entra(tableau: Tableau, epsilon: float = EPSILON) -> Optional[int]:
     fila_z = tableau.datos[tableau.fila_objetivo, :-1]
+
+    fila_z = np.where(abs(fila_z) < epsilon, 0.0, fila_z)
+
     candidatos = np.where(fila_z < -epsilon)[0]
-    return int(candidatos[0]) if candidatos.size else None
+    if len(candidatos) == 0:
+        return None
+    return int(min(candidatos))
 
 
 # ve la fila de la tabla para encontrar la variable que sale
@@ -115,7 +120,7 @@ def quien_sale(
     fila_saliente = None
 
     for i in range(len(LD)):
-        if col[i] > epsilon:
+        if col[i] > epsilon and LD[i] >= -epsilon:
             ratio = LD[i] / col[i]
 
             if ratio < min_ratio - epsilon or (
@@ -136,15 +141,27 @@ def simplex_iterate(
 ) -> tuple[Tableau, int]:
 
     iteration = 0
+    bases_vistas = set()
 
     while True:
+        if iteration >= MAX_ITERATIONS:
+            raise StabilityError("Número máximo de iteraciones alcanzado")
+    
+        base_actual = tuple(tableau.variables_basicas)
+        if base_actual in bases_vistas:
+            raise StabilityError("Ciclaje detectado")
+        bases_vistas.add(base_actual)
+
         col = quien_entra(tableau, epsilon)
+
         if col is None:
+            if trazo:
+                print("Punto optimo alcanzado")
             return tableau, iteration
 
         fila = quien_sale(tableau, col, epsilon)
         if fila is None:
-            return tableau, iteration
+            raise UnboundedError(f"No acotado: columna pivote {col} sin fila válida")
 
         saliente = int(tableau.variables_basicas[fila])
 
