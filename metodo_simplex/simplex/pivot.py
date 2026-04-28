@@ -59,6 +59,7 @@ def pivot(
         num_holguras=tableau.num_holguras,
         num_excesos=tableau.num_excesos,
         num_artificiales=tableau.num_artificiales,
+        objective=tableau.objective,
     )
 
     return nuevo_tableau

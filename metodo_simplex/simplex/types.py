@@ -15,7 +15,7 @@ class ObjectiveType(IntEnum):
     MIN = -1
 
 EPSILON: float = 1e-10
-MAX_ITERATIONS: int = 10000
+MAX_ITERATIONS: int = 10000 # IMPLEMENTAR QUINTERO!!!!
 
 Matriz: TypeAlias = npt.NDArray[np.float64]
 Tupla: TypeAlias = np.ndarray[tuple[int, ...], np.dtype[np.intp]]

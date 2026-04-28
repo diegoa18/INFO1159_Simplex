@@ -24,6 +24,7 @@ class Tableau:
     num_holguras: int
     num_excesos: int
     num_artificiales: int
+    objective: ObjectiveType
 
     # metodo que crea un Tableau a partir de un programa lineal, inicializando 
     # el tableau con las restricciones y la funcion objetivo
@@ -93,6 +94,7 @@ class Tableau:
             num_holguras=num_holguras,
             num_excesos=num_excesos,
             num_artificiales=num_artificiales,
+            objective=problem.objective,
         )
 
     #PROPIEDADESEDAWADA PERDONE PROFE
@@ -173,6 +175,7 @@ class Tableau:
             num_holguras=self.num_holguras,
             num_excesos=self.num_excesos,
             num_artificiales=0,
+            objective=self.objective,
         )
 
     def restaurar_objetivo(self, c: np.ndarray, is_minimization: bool) -> None:
@@ -217,7 +220,7 @@ def format_number(valor: float, ancho: int = ANCHO_COLUMNA_DEFAULT) -> str:
 def print_tableau(
     tableau: Tableau, iteracion: Optional[int] = None,
     fila_pivote: Optional[int] = None, columna_pivote: Optional[int] = None,
-    variable_saliente: Optional[int] = None,
+    variable_saliente: Optional[int] = None, objective: Optional[ObjectiveType] = None,
 ) -> None:
 
     num_restricciones = tableau.num_restricciones
@@ -248,7 +251,8 @@ def print_tableau(
 
     # fila Z
     fila_z = tableau.datos[tableau.fila_objetivo]
-    cadena_fila = "Z ".ljust(3) + format_number(-1.0, ancho_columna).rjust(ancho_columna)
+    z_sign = float(tableau.objective)
+    cadena_fila = "Z ".ljust(3) + format_number(z_sign, ancho_columna).rjust(ancho_columna)
 
     for j in columnas_ordenadas:
         cadena_fila += format_number(fila_z[j], ancho_columna).rjust(ancho_columna)

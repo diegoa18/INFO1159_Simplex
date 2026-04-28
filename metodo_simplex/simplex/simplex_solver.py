@@ -26,7 +26,19 @@ class SimplexSolver:
     def standar(self, tableau, problem, is_min):
         if is_min:
             tableau.datos[tableau.fila_objetivo, :tableau.num_variables_originales] = problem.c
+        
+        z_row = tableau.fila_objetivo
 
+        for i in range(tableau.num_restricciones):
+            var_en_base = int(tableau.variables_basicas[i])
+            coef_z = tableau.datos[z_row, var_en_base]
+            if abs(coef_z) > EPSILON:
+                tableau.datos[z_row, :] -= coef_z * tableau.datos[i, :]
+
+        if self.trace:
+            print("\n--- TABLA INICIAL SIMPLEX ---")
+            print_tableau(tableau)
+        
         tableau, iterations = simplex_iterate(tableau, trace=self.trace)
 
         optimal_value, variables = extract(tableau)
@@ -38,11 +50,13 @@ class SimplexSolver:
     
     def two_phases(self, tableau, problem, is_min):
         z_row = tableau.fila_objetivo
-        
+
         tableau.datos[z_row, :] = 0
         for j in tableau.rango_artificiales:
             tableau.datos[z_row, j] = 1.0
         
+        print("\n--- Tableado inicial ---")
+        print_tableau(tableau)
         for i in range(tableau.num_restricciones):
             var_en_base = int(tableau.variables_basicas[i])
             if var_en_base in tableau.rango_artificiales:
