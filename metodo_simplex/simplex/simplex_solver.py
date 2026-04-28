@@ -38,7 +38,7 @@ class SimplexSolver:
         if self.trazo:
             print("\n--- TABLA INICIAL SIMPLEX ---")
             print_tableau(tableau)
-        
+
         tableau, iterations = simplex_iterate(tableau, trazo=self.trazo)
 
         valor_optimo, variables = extract(tableau)
@@ -47,14 +47,15 @@ class SimplexSolver:
             valor_optimo = -valor_optimo
 
         return Solution(valor_optimo, variables, True, iterations)
-    
+
+    # ejecuta el método simplex con dos fases
     def two_phases(self, tableau, problem, es_min):
         fila_z = tableau.fila_objetivo
 
         tableau.datos[fila_z, :] = 0
         for j in tableau.rango_artificiales:
             tableau.datos[fila_z, j] = 1.0
-        
+
         print("\n--- Tableado inicial ---")
         print_tableau(tableau)
         for i in range(tableau.num_restricciones):
@@ -94,16 +95,17 @@ class SimplexSolver:
 
         return Solution(valor_optimo, variables, True, iter1 + iter2)
 
+
+# ve la fila de la función objetivo para encontrar la variable que entra
 def quien_entra(tableau: Tableau, epsilon: float = EPSILON) -> Optional[int]:
     fila_z = tableau.datos[tableau.fila_objetivo, :-1]
     candidatos = np.where(fila_z < -epsilon)[0]
     return int(candidatos[0]) if candidatos.size else None
 
 
+# ve la fila de la tabla para encontrar la variable que sale
 def quien_sale(
-    tableau: Tableau,
-    col_pivote: int,
-    epsilon: float = EPSILON
+    tableau: Tableau, col_pivote: int, epsilon: float = EPSILON
 ) -> Optional[int]:
 
     LD = tableau.datos[:-1, -1]
@@ -117,14 +119,16 @@ def quien_sale(
             ratio = LD[i] / col[i]
 
             if ratio < min_ratio - epsilon or (
-                abs(ratio - min_ratio) < epsilon and
-                (fila_saliente is None or i < fila_saliente)
+                abs(ratio - min_ratio) < epsilon
+                and (fila_saliente is None or i < fila_saliente)
             ):
                 min_ratio = ratio
                 fila_saliente = i
 
     return fila_saliente
 
+
+# identifica pivote, printea la tabla y llama a pivor para actualizar el tableau
 def simplex_iterate(
     tableau: Tableau,
     epsilon: float = EPSILON,
@@ -134,7 +138,6 @@ def simplex_iterate(
     iteration = 0
 
     while True:
-
         col = quien_entra(tableau, epsilon)
         if col is None:
             return tableau, iteration
@@ -158,6 +161,8 @@ def simplex_iterate(
 
         iteration += 1
 
+
+# una vez que quien entra es None, extrae las soluciones básicas y devuelve el valor óptimo
 def extract(tableau: Tableau):
     n = tableau.num_variables_originales
     x = np.zeros(n)

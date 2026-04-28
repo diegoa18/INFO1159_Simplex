@@ -13,7 +13,8 @@ from .types import (ConstraintType, Matriz, ObjectiveType, EPSILON,
 if TYPE_CHECKING:
     from .problem import LinearProgram
 
-
+# clase de datos que sirve de contenedor
+# de toda la info del estado actual del tableau
 @dataclass
 class Tableau:
     datos: Matriz
