@@ -7,7 +7,7 @@ from simplex.input_parser import build_problem_from_input
 
 def main() -> None:
     problem = build_problem_from_input()
-    solver = SimplexSolver(trace=True)
+    solver = SimplexSolver(trazo=True)
     # RESOLUCION
     try:
         solution = solver.solve(problem)
