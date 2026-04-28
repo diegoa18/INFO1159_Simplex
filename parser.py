@@ -1,6 +1,7 @@
 from typing import Optional
 
 
+# convierte de string a float, maneja signos negativos
 def _parse_real(s: str) -> float:
     s = s.strip()
     if s.startswith("-"):
@@ -9,6 +10,7 @@ def _parse_real(s: str) -> float:
     return float(s) if s else 1.0
 
 
+# limpia cadena, mapea coeficientes a variables especificas (x, y, z, w, u, v)
 def _parse_coeffs(texto: str) -> list[float]:
     texto = texto.replace("-", "+-").replace(" ", "")
     partes = [p for p in texto.split("+") if p]
@@ -30,6 +32,7 @@ def _parse_coeffs(texto: str) -> list[float]:
     return coeffs
 
 
+# detecta operador de restricción y devuelve los lados izquierdo y derecho
 def _detectar_signo(texto: str) -> tuple[str, str, str]:
     for signo in ("<=", ">=", "=", "<", ">"):
         if signo in texto:
@@ -38,6 +41,7 @@ def _detectar_signo(texto: str) -> tuple[str, str, str]:
     raise ValueError("No se reconoció operador de restricción")
 
 
+# descompone una restricción en coeficientes, lado derecho y signo
 def parse_restriccion(
     texto: str, n_vars: Optional[int] = None
 ) -> tuple[list[float], float, str]:
@@ -56,6 +60,7 @@ def parse_restriccion(
     return (coeff, rhs, tipo_map.get(signo, "<="))
 
 
+# valida q la entrada no este vacia y parsea los coeficientes de la función objetivo
 def parse_funcion_objetivo(texto: str, n_vars: int) -> list[float]:
     texto = texto.strip()
     if not texto:
@@ -71,6 +76,7 @@ def parse_funcion_objetivo(texto: str, n_vars: int) -> list[float]:
     return coeff
 
 
+# pide tipo de optimización (max/min)
 def pedir_tipo() -> str:
     while True:
         tipo = input("Tipo de optimización (max/min): ").strip().lower()
@@ -79,6 +85,7 @@ def pedir_tipo() -> str:
         print("Entrada inválida. Escribe 'max' o 'min'.")
 
 
+# pide cantidad de variables de decisión
 def pedir_num_vars() -> int:
     while True:
         try:
@@ -100,6 +107,7 @@ def pedir_funcion_objetivo(n_vars: int) -> list[float]:
             print(f"Formato inválido: {e}")
 
 
+# pide cantidad de restricciones
 def pedir_num_restricciones() -> int:
     while True:
         try:
@@ -111,6 +119,7 @@ def pedir_num_restricciones() -> int:
         print("Debe ser un entero >= 0.")
 
 
+# segun n de restricciones, pide cada una
 def pedir_restricciones(
     n_vars: int, n_restricciones: int
 ) -> list[tuple[list[float], float, str]]:
@@ -129,6 +138,7 @@ def pedir_restricciones(
     return restricciones
 
 
+# usa las otras funciones en orden para construir problema
 def pedir_problema(
     modo: str = "simplex",
 ) -> tuple[str, list[float], list[tuple[list[float], float, str]]]:
