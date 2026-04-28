@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-import numpy as np
+import numpy as np , math
 
-from .types import ConstraintType, Matriz, ObjectiveType, EPSILON
+from .types import (ConstraintType, Matriz, ObjectiveType, EPSILON,
+    UMBRAL_NOTACION_CIENTIFICA_GRANDE, UMBRAL_NOTACION_CIENTIFICA_PEQUENA, TOLERANCIA_MANTISA,
+    DECIMALES_NORMAL, ANCHO_COLUMNA_DEFAULT, ANCHO_COLUMNA_TABLAU,
+)
 
 if TYPE_CHECKING:
     from .problem import LinearProgram
@@ -177,6 +180,7 @@ class Tableau:
             c if is_minimization else -c
         )
 
+    #PROPIEDADESEDAWADA PERDONE PROFE
     @property # devuelve el numero total de columnas en el tableau
     def columnas(self) -> int:  
         return self.datos.shape[1]
@@ -184,3 +188,91 @@ class Tableau:
     @property # devuelve el numero total de filas en el tableau
     def filas(self) -> int:  
         return self.datos.shape[0]
+
+
+def format_number_scientific(value: float) -> str:
+    valor_absoluto = abs(value)
+    if valor_absoluto == 0:
+        return f"{0.0:.{DECIMALES_NORMAL}f}"
+    # notación de potencia 10^n para números muy grandes o muy pequeños
+    if valor_absoluto >= UMBRAL_NOTACION_CIENTIFICA_GRANDE or valor_absoluto < UMBRAL_NOTACION_CIENTIFICA_PEQUENA:  
+        exponente = math.floor(math.log10(valor_absoluto))
+        mantisa = value / (10 ** exponente)
+
+        # formato: mantisa×10^exp
+        if abs(mantisa - round(mantisa)) < TOLERANCIA_MANTISA:
+            # si la mantisa es casi un entero
+            return f"{int(round(mantisa))}×10^{exponente}"
+        # si tiene decimales
+        return f"{mantisa:.1f}×10^{exponente}"
+
+    # formato normal con 2 decimales
+    return f"{value:.{DECIMALES_NORMAL}f}"
+
+
+def format_number(valor: float, ancho: int = ANCHO_COLUMNA_DEFAULT) -> str:
+    return f"{format_number_scientific(valor):>{ancho}}"
+
+
+def print_tableau(
+    tableau: Tableau, iteracion: Optional[int] = None,
+    fila_pivote: Optional[int] = None, columna_pivote: Optional[int] = None,
+    variable_saliente: Optional[int] = None,
+) -> None:
+
+    num_restricciones = tableau.num_restricciones
+
+    # encabezado de iteración (solo simplex)
+    if iteracion is not None:
+        print(f"Iteración {iteracion}\n")
+
+    # orden de columnas
+    columnas_ordenadas = (
+        list(tableau.rango_originales)
+        + list(tableau.rango_excesos)
+        + list(tableau.rango_artificiales)
+        + list(tableau.rango_holguras)
+    )
+
+    ancho_columna = ANCHO_COLUMNA_TABLAU
+    mapa_nombres = {j: tableau.nombre_variable(j) for j in columnas_ordenadas}
+
+    encabezado = "VB".ljust(3) + "Z".center(ancho_columna)
+
+    for j in columnas_ordenadas:
+        encabezado += mapa_nombres[j].center(ancho_columna)
+
+    encabezado += "LD".rjust(ancho_columna)
+    print(encabezado)
+    print("-" * len(encabezado))
+
+    # fila Z
+    fila_z = tableau.datos[tableau.fila_objetivo]
+    cadena_fila = "Z ".ljust(3) + format_number(-1.0, ancho_columna).rjust(ancho_columna)
+
+    for j in columnas_ordenadas:
+        cadena_fila += format_number(fila_z[j], ancho_columna).rjust(ancho_columna)
+
+    cadena_fila += format_number(fila_z[-1], ancho_columna).rjust(ancho_columna)
+    print(cadena_fila)
+    
+    for i in range(num_restricciones):
+        variable_basica = int(tableau.variables_basicas[i])
+        cadena_fila = tableau.nombre_variable(variable_basica).ljust(3) + format_number(0.0, ancho_columna).rjust(ancho_columna)
+
+        for j in columnas_ordenadas:
+            valor = tableau.datos[i, j]
+            cadena_fila += format_number(valor, ancho_columna).rjust(ancho_columna)
+
+        cadena_fila += format_number(tableau.datos[i, -1], ancho_columna).rjust(ancho_columna)
+        print(cadena_fila)
+
+    print("-" * len(encabezado))
+
+    # info pivote
+    if fila_pivote is not None and columna_pivote is not None and variable_saliente is not None:
+        print()
+        entrante = mapa_nombres.get(columna_pivote, tableau.nombre_variable(columna_pivote))
+        print(f"entra {entrante}, sale {tableau.nombre_variable(variable_saliente)}")
+
+    print()

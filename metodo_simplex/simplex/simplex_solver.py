@@ -3,11 +3,10 @@ from __future__ import annotations
 import numpy as np
 from typing import Optional
 
-from .printer_tableau import print_tableau
 from .exceptions import StabilityError
 from .pivot import pivot
 from .problem import LinearProgram, Solution
-from .tableau import Tableau
+from .tableau import Tableau , print_tableau
 from .types import ObjectiveType, EPSILON
 
 class SimplexSolver:
@@ -137,10 +136,10 @@ def simplex_iterate(
         if trace:
             print_tableau(
                 tableau,
-                iteration=iteration + 1,
-                pivot_row=row,
-                pivot_col=col,
-                leaving_var=leaving,
+                iteracion=iteration + 1,
+                fila_pivote=row,
+                columna_pivote=col,
+                variable_saliente=leaving,
             )
 
         iteration += 1
