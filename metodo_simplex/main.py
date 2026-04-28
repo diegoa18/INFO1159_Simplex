@@ -34,6 +34,7 @@ def _convertir(tipo: str, fo: list[float], restricciones) -> LinearProgram:
     return LinearProgram(A=A, b=b, c=c, constraints=constraints_arr, objective=obj)
 
 
+# pedimos problema y convertimos a formato simplex, luego resolvemos e imprimimos resultados
 def main() -> None:
     tipo, fo, restricciones = pedir_problema()
     lp = _convertir(tipo, fo, restricciones)
