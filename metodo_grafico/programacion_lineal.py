@@ -201,7 +201,7 @@ def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
     sol["hull"] = hull
     sol["resultados"] = resultados
 
-    if estado == "optimo":
+    if estado == "optimo" or estado.startswith("optimo_degenerado"):
         opt = (
             max(resultados, key=lambda r: r[1])
             if tipo == "max"
@@ -213,46 +213,16 @@ def resolver_PL(restricciones, a_obj, b_obj, tipo="max"):
     return sol
 
 
-MENSAJES_ESTADO = {
-    "infactible": "No hay región factible",
-    "no_acotado": "Problema no acotado",
-    "optimo_degenerado_punto": "Óptimo degenerado (punto)",
-    "optimo_degenerado_segmento": "Óptimo degenerado (segmento)",
-    "degenerado": "Región degenerada (área ~ 0)",
-}
-
-
-def manejar_estado(solucion):
-    estado = solucion["estado"]
-
-    if estado != "optimo":
-        msg = MENSAJES_ESTADO.get(estado, f"Estado no manejado: {estado}")
-        print(msg)
-        return False
-
-    return True
-
-
 # VISUALIZACION
 
-# === CONFIGURACIÓN DE GRÁFICOS (solo valores hardcodeados) ===
-TAMANO_GRAFICO = (12, 10)
-MARGEN_RELATIVO_GRAFICO = 0.05
-PUNTOS_RECTA_VERTICAL = 3
-PUNTOS_RECTA_HORIZONTAL = 400
-MARGEN_LINEAS_Z = 1  # margen en y para no dibujar líneas gigantes
-UMBRAL_NOTACION_CIENTIFICA_POR_DEFECTO = 1e4
-UMBRAL_NOTACION_CIENTIFICA_OBJETIVO = 1e8
-UMBRAL_DECIMAL_PEQUENO = 1e-4
+MARGEN_LINEAS_Z = 1
 
 
-def fmt_num(numero, umbral_notacion_cientifica=None):
-    if umbral_notacion_cientifica is None:
-        umbral_notacion_cientifica = UMBRAL_NOTACION_CIENTIFICA_POR_DEFECTO
+def fmt_num(numero):
     if numero == 0:
         return "0"
     valor_absoluto = abs(numero)
-    if valor_absoluto >= umbral_notacion_cientifica or valor_absoluto <= UMBRAL_DECIMAL_PEQUENO:
+    if valor_absoluto >= 1000 or valor_absoluto <= 1e-9:
         return f"{numero:.2e}"
     elif abs(numero - int(numero)) < EPS:
         return f"{int(numero)}"
@@ -265,8 +235,12 @@ def fmt_objetivo(coeficiente_x, coeficiente_y):
     for coeficiente, variable in ((coeficiente_x, "x"), (coeficiente_y, "y")):
         if abs(coeficiente) < EPS:
             continue
-        termino = fmt_num(abs(coeficiente), umbral_notacion_cientifica=UMBRAL_NOTACION_CIENTIFICA_OBJETIVO) + variable
-        terminos.append((termino if coeficiente > 0 else f"-{termino}") if not terminos else (f"+ {termino}" if coeficiente > 0 else f"- {termino}"))
+        termino = fmt_num(abs(coeficiente)) + variable
+        terminos.append(
+            (termino if coeficiente > 0 else f"-{termino}")
+            if not terminos
+            else (f"+ {termino}" if coeficiente > 0 else f"- {termino}")
+        )
     return " ".join(terminos) if terminos else "0"
 
 
@@ -274,31 +248,40 @@ def construir_titulo(solucion):
     (coordenada_x, coordenada_y), valor_optimo = solucion["optimo"]
     coeficiente_x, coeficiente_y = solucion["coeficientes"]
     expresion_objetivo = fmt_objetivo(coeficiente_x, coeficiente_y)
-    return f"Z = {expresion_objetivo}  |  en ({fmt_num(coordenada_x, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}, {fmt_num(coordenada_y, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}) → Z = {fmt_num(valor_optimo, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}"
+    return f"Z = {expresion_objetivo}  |  en ({fmt_num(coordenada_x)}, {fmt_num(coordenada_y)}) → Z = {fmt_num(valor_optimo)}"
 
 
-def calcular_limites(vertices, margen_relativo=None):
-    margen_relativo = margen_relativo or MARGEN_RELATIVO_GRAFICO
-    if not vertices:
-        return -10, 10, -10, 10
+def calcular_limites(vertices, margen_pct=0.1):
     coordenadas_x, coordenadas_y = zip(*vertices)
-    xmin, xmax, ymin, ymax = min(coordenadas_x), max(coordenadas_x), min(coordenadas_y), max(coordenadas_y)
+    xmin, xmax = min(coordenadas_x), max(coordenadas_x)
+    ymin, ymax = min(coordenadas_y), max(coordenadas_y)
     dx = (xmax - xmin) or max(abs(xmax), 1.0)
     dy = (ymax - ymin) or max(abs(ymax), 1.0)
-    margen_x, margen_y = dx * margen_relativo, dy * margen_relativo
-    return xmin - margen_x, xmax + margen_x, ymin - margen_y, ymax + margen_y
+    return xmin - dx * margen_pct, xmax + dx * margen_pct, ymin - dy * margen_pct, ymax + dy * margen_pct
 
 
 def puntos_recta(restriccion, xmin, xmax, ymin, ymax):
     coeficiente_x, coeficiente_y, termino_independiente, _ = restriccion
 
+    resolucion = max((xmax - xmin), (ymax - ymin)) / 200
+
     if abs(coeficiente_y) < EPS:
-        return [(termino_independiente / coeficiente_x, coordenada_y) for coordenada_y in np.linspace(ymin, ymax, PUNTOS_RECTA_VERTICAL)]
+        return [
+            (termino_independiente / coeficiente_x, coordenada_y)
+            for coordenada_y in np.linspace(ymin, ymax, 3)
+        ]
 
-    coordenadas_x = np.linspace(xmin, xmax, PUNTOS_RECTA_HORIZONTAL)
-    coordenadas_y = (termino_independiente - coeficiente_x * coordenadas_x) / coeficiente_y  # y
+    coordenadas_x = np.linspace(xmin, xmax, int((xmax - xmin) / resolucion) + 1)
+    coordenadas_y = (
+        termino_independiente - coeficiente_x * coordenadas_x
+    ) / coeficiente_y  # y
 
-    return list(zip(coordenadas_x[np.isfinite(coordenadas_y)], coordenadas_y[np.isfinite(coordenadas_y)]))  # pares (eliminando valores invalidos)
+    return list(
+        zip(
+            coordenadas_x[np.isfinite(coordenadas_y)],
+            coordenadas_y[np.isfinite(coordenadas_y)],
+        )
+    )  # pares (eliminando valores invalidos)
 
 
 def formatear_restriccion(restriccion):
@@ -324,9 +307,19 @@ def graficar_restricciones(eje, restricciones, limites):
             continue
         coordenadas_x, coordenadas_y = zip(*puntos)
         if es_eje(restriccion):
-            eje.plot(coordenadas_x, coordenadas_y, color="black", linewidth=2.5, alpha=0.9)
+            eje.plot(
+                coordenadas_x, coordenadas_y, color="black", linewidth=2.5, alpha=0.9
+            )
         else:
-            eje.plot(coordenadas_x, coordenadas_y, color=mapa_colores(indice % 10), linestyle="--", linewidth=1.5, alpha=0.8, label=formatear_restriccion(restriccion))
+            eje.plot(
+                coordenadas_x,
+                coordenadas_y,
+                color=mapa_colores(indice % 10),
+                linestyle="--",
+                linewidth=1.5,
+                alpha=0.8,
+                label=formatear_restriccion(restriccion),
+            )
 
 
 def graficar_region(eje, hull):
@@ -334,18 +327,45 @@ def graficar_region(eje, hull):
         return
     coordenadas_x, coordenadas_y = zip(*(hull + [hull[0]]))
     eje.fill(coordenadas_x, coordenadas_y, color="lightgreen", alpha=0.3, zorder=1)
-    eje.plot(coordenadas_x, coordenadas_y, color="green", linewidth=2.5, alpha=0.9, zorder=2, label="Región Factible")
+    eje.plot(
+        coordenadas_x,
+        coordenadas_y,
+        color="green",
+        linewidth=2.5,
+        alpha=0.9,
+        zorder=2,
+        label="Región Factible",
+    )
 
 
 def graficar_vertices(eje, vertices_totales, vertices_factibles, optimo):
     conjunto_factibles = set(vertices_factibles)
-    vertices_no_factibles = [vertice for vertice in vertices_totales if vertice not in conjunto_factibles]
+    vertices_no_factibles = [
+        vertice for vertice in vertices_totales if vertice not in conjunto_factibles
+    ]
     if vertices_no_factibles:
         coordenadas_x, coordenadas_y = zip(*vertices_no_factibles)
-        eje.scatter(coordenadas_x, coordenadas_y, c="gray", s=50, alpha=0.8, zorder=3, label="Vértices no factibles")
+        eje.scatter(
+            coordenadas_x,
+            coordenadas_y,
+            c="gray",
+            s=50,
+            alpha=0.8,
+            zorder=3,
+            label="Vértices no factibles",
+        )
     for vertice in vertices_factibles:
         if optimo is not None and vertice == optimo[0]:
-            eje.scatter(*vertice, c="gold", s=300, zorder=8, edgecolors="orange", linewidths=2, marker="*", label="Óptimo")
+            eje.scatter(
+                *vertice,
+                c="gold",
+                s=300,
+                zorder=8,
+                edgecolors="orange",
+                linewidths=2,
+                marker="*",
+                label="Óptimo",
+            )
         else:
             eje.scatter(*vertice, c="red", s=80, zorder=5, edgecolors="darkred")
 
@@ -362,38 +382,75 @@ def graficar_Z(eje, resultados, coeficiente_x, coeficiente_y, limites, optimo):
         profundidad = 6 if es_optimo else 4
         if abs(coeficiente_y) > EPS:
             valores_y = (valor_z - coeficiente_x * valores_x) / coeficiente_y
-            mascara = (valores_y >= ymin - MARGEN_LINEAS_Z) & (valores_y <= ymax + MARGEN_LINEAS_Z)
+            mascara = (valores_y >= ymin - MARGEN_LINEAS_Z) & (
+                valores_y <= ymax + MARGEN_LINEAS_Z
+            )
             if mascara.any():
-                eje.plot(valores_x[mascara], valores_y[mascara], color=color, linewidth=ancho_linea, alpha=transparencia, linestyle=estilo_linea, zorder=profundidad)
+                eje.plot(
+                    valores_x[mascara],
+                    valores_y[mascara],
+                    color=color,
+                    linewidth=ancho_linea,
+                    alpha=transparencia,
+                    linestyle=estilo_linea,
+                    zorder=profundidad,
+                )
         else:
-            eje.plot([valor_z / coeficiente_x] * 2, [ymin, ymax], color=color, linewidth=ancho_linea, alpha=transparencia, linestyle=estilo_linea, zorder=profundidad)
+            eje.plot(
+                [valor_z / coeficiente_x] * 2,
+                [ymin, ymax],
+                color=color,
+                linewidth=ancho_linea,
+                alpha=transparencia,
+                linestyle=estilo_linea,
+                zorder=profundidad,
+            )
 
 
 def graficar_etiquetas(eje, resultados, optimo):
     for vertice, valor_z in resultados:
         es_optimo = vertice == optimo[0]
-        eje.annotate(f"Z = {fmt_num(valor_z, UMBRAL_NOTACION_CIENTIFICA_OBJETIVO)}", vertice, textcoords="offset points", xytext=(8, 8), fontsize=(9 if es_optimo else 8), color=("darkgreen" if es_optimo else "dimgray"), fontweight=("bold" if es_optimo else "normal"), bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7), zorder=7)
+        eje.annotate(
+            f"Z = {fmt_num(valor_z)}",
+            vertice,
+            textcoords="offset points",
+            xytext=(8, 8),
+            fontsize=(9 if es_optimo else 8),
+            color=("darkgreen" if es_optimo else "dimgray"),
+            fontweight=("bold" if es_optimo else "normal"),
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7),
+            zorder=7,
+        )
 
 
 def graficar(solucion, restricciones):
-    if not manejar_estado(solucion):
+    estado = solucion["estado"]
+
+    if estado != "optimo":
         return
-    figura, eje = plt.subplots(figsize=TAMANO_GRAFICO)
+
     hull = solucion["hull"]
-    limites = calcular_limites(hull or [(0, 0)])
+    limites = calcular_limites(hull)
+    xmin, xmax, ymin, ymax = limites
+
+    rango = max(xmax - xmin, ymax - ymin, 1)
+    escala = max(1, int(rango))
+    figsize = (10 + escala, 8 + escala)
+    figsize = tuple(min(x, 20) for x in figsize)
+
+    figura, eje = plt.subplots(figsize=figsize)
     configurar_ejes(eje, limites)
     graficar_restricciones(eje, restricciones, limites)
     graficar_region(eje, hull)
     optimo = solucion["optimo"]
-    graficar_vertices(eje, solucion["all_vertices"], solucion["vertices_factibles"], optimo)
-    if optimo:
-        graficar_Z(eje, solucion["resultados"], *solucion["coeficientes"], limites, optimo)
-        graficar_etiquetas(eje, solucion["resultados"], optimo)
-        titulo = construir_titulo(solucion)
-    else:
-        titulo = "Problema no acotado"
+    graficar_vertices(
+        eje, solucion["all_vertices"], solucion["vertices_factibles"], optimo
+    )
+    graficar_Z(eje, solucion["resultados"], *solucion["coeficientes"], limites, optimo)
+    graficar_etiquetas(eje, solucion["resultados"], optimo)
+    titulo = construir_titulo(solucion)
+
     eje.set_title(titulo, fontsize=14, fontweight="bold", pad=12)
-    ubicacion_leyenda = "best" if len(hull) > 3 else "upper right"
-    eje.legend(loc=ubicacion_leyenda, fontsize=9, framealpha=0.9).set_zorder(100)
+    eje.legend(loc="best", fontsize=9, framealpha=0.9)
     plt.tight_layout()
     plt.show()
