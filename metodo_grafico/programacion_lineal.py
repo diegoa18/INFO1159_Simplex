@@ -3,7 +3,6 @@ import numpy as np
 from numpy.linalg import norm
 
 EPS = 1e-9  # 0.000000001 -> epsilon numerico para evitar errores de precision
-EPS_PAR = 1e-7
 
 
 def normalizar(valor):  # redondear a 0 o a 6 decimales
@@ -25,7 +24,7 @@ def parse_num(x):
 def son_paralelas(r1, r2):
     # [:2] para ignorar c y asi sacar determinante con (an,bn), si det = 0 -> ||
     (a1, b1), (a2, b2) = r1[:2], r2[:2]
-    return abs(a1 * b2 - a2 * b1) < EPS_PAR
+    return abs(a1 * b2 - a2 * b1) < EPS
 
 
 def calcular_interseccion(r1, r2):
@@ -222,7 +221,7 @@ def fmt_num(numero):
     if numero == 0:
         return "0"
     valor_absoluto = abs(numero)
-    if valor_absoluto >= 1000 or valor_absoluto <= 1e-9:
+    if valor_absoluto >= 1000 or valor_absoluto <= EPS:
         return f"{numero:.2e}"
     elif abs(numero - int(numero)) < EPS:
         return f"{int(numero)}"
@@ -260,10 +259,10 @@ def calcular_limites(vertices, margen_pct=0.1):
     return xmin - dx * margen_pct, xmax + dx * margen_pct, ymin - dy * margen_pct, ymax + dy * margen_pct
 
 
-def puntos_recta(restriccion, xmin, xmax, ymin, ymax):
+def puntos_recta(restriccion, xmin, xmax, ymin, ymax, num_points: int = 200):
     coeficiente_x, coeficiente_y, termino_independiente, _ = restriccion
 
-    resolucion = max((xmax - xmin), (ymax - ymin)) / 200
+    resolucion = max((xmax - xmin), (ymax - ymin)) / num_points
 
     if abs(coeficiente_y) < EPS:
         return [

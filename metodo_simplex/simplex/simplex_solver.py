@@ -141,16 +141,16 @@ def simplex_iterate(
 ) -> tuple[Tableau, int]:
 
     iteration = 0
-    bases_vistas = set()
+    vb_vistas = set()
 
     while True:
         if iteration >= MAX_ITERATIONS:
             raise StabilityError("Número máximo de iteraciones alcanzado")
     
-        base_actual = tuple(tableau.variables_basicas)
-        if base_actual in bases_vistas:
+        vb_actual = tuple(tableau.variables_basicas)
+        if vb_actual in vb_vistas:
             raise StabilityError("Ciclaje detectado")
-        bases_vistas.add(base_actual)
+        vb_vistas.add(vb_actual)
 
         col = quien_entra(tableau, epsilon)
 
