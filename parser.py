@@ -34,10 +34,16 @@ def _parse_coeffs(texto: str) -> list[float]:
 
 # detecta operador de restricción y devuelve los lados izquierdo y derecho
 def _detectar_signo(texto: str) -> tuple[str, str, str]:
-    for signo in ("<=", ">=", "=", "<", ">"):
+    for signo in ("<=", ">=", "="):
         if signo in texto:
             izq, der = texto.split(signo, 1)
             return izq.strip(), der.strip(), signo
+
+    for invalido in ("<", ">"):
+        if invalido in texto:
+            raise ValueError(
+                "No se permiten desigualdades estrictas (<, >). Usa <=, >= o =."
+            )
     raise ValueError("No se reconoció operador de restricción")
 
 
@@ -57,7 +63,7 @@ def parse_restriccion(
         raise ValueError(f"Se esperaban {n_vars} coeficientes, got {len(coeff)}")
 
     tipo_map = {"<=": "<=", ">=": ">=", "=": "="}
-    return (coeff, lado_derecho, tipo_map.get(signo, "<="))
+    return (coeff, lado_derecho, tipo_map[signo])
 
 
 # valida q la entrada no este vacia y parsea los coeficientes de la función objetivo
@@ -95,6 +101,7 @@ def pedir_num_vars() -> int:
         except:
             pass
         print("Debe ser un entero positivo.")
+
 
 # pide coeficientes de la función objetivo
 def pedir_funcion_objetivo(n_vars: int) -> list[float]:

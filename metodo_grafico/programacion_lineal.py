@@ -50,12 +50,13 @@ def orientacion(origen, a, b):
     )  # positivo -> izquierda
 
 
+# convex
 def convex_hull(puntos):
-    if len(puntos) < 3:  # caso trivial
+    if len(puntos) < 3:
         return list(puntos)
 
-    pts = sorted(puntos)  # orden lexicografico (x,y)
-    lower, upper = [], []  # lower = parte inferior del poligono, upper = superior
+    pts = sorted(puntos)
+    lower, upper = [], []
 
     # almenos 2 anteriores y determinar orientacion
     for p in pts:
@@ -76,8 +77,6 @@ def convex_hull(puntos):
 CUMPLE = {
     "<=": lambda v, c: v <= c + EPS,
     ">=": lambda v, c: v >= c - EPS,
-    "<": lambda v, c: v < c - EPS,
-    ">": lambda v, c: v > c + EPS,
 }
 
 
@@ -256,7 +255,12 @@ def calcular_limites(vertices, margen_pct=0.1):
     ymin, ymax = min(coordenadas_y), max(coordenadas_y)
     dx = (xmax - xmin) or max(abs(xmax), 1.0)
     dy = (ymax - ymin) or max(abs(ymax), 1.0)
-    return xmin - dx * margen_pct, xmax + dx * margen_pct, ymin - dy * margen_pct, ymax + dy * margen_pct
+    return (
+        xmin - dx * margen_pct,
+        xmax + dx * margen_pct,
+        ymin - dy * margen_pct,
+        ymax + dy * margen_pct,
+    )
 
 
 def puntos_recta(restriccion, xmin, xmax, ymin, ymax, num_points: int = 200):
