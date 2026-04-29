@@ -11,10 +11,10 @@ def main():
     tipo, fo, restricciones_raw = pedir_problema(modo="grafico")
 
     # Convertir formato neutro a formato método gráfico
-    # restricciones_raw: list[(coeff, rhs, tipo)]
+    # restricciones_raw: list[(coeff, lado_derecho, tipo)]
     restricciones = []
-    for coeff, rhs, signo in restricciones_raw:
-        restricciones.append((coeff[0], coeff[1], rhs, signo))
+    for coeff, lado_derecho, signo in restricciones_raw:
+        restricciones.append((coeff[0], coeff[1], lado_derecho, signo))
 
     # Restricciones de no negatividad
     restricciones += [

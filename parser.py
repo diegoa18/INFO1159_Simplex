@@ -46,7 +46,7 @@ def parse_restriccion(
     texto: str, n_vars: Optional[int] = None
 ) -> tuple[list[float], float, str]:
     izq, der, signo = _detectar_signo(texto)
-    rhs = float(der.strip())
+    lado_derecho = float(der.strip())
 
     if "x" in izq.lower() or "y" in izq.lower():
         coeff = _parse_coeffs(izq)
@@ -57,7 +57,7 @@ def parse_restriccion(
         raise ValueError(f"Se esperaban {n_vars} coeficientes, got {len(coeff)}")
 
     tipo_map = {"<=": "<=", ">=": ">=", "=": "="}
-    return (coeff, rhs, tipo_map.get(signo, "<="))
+    return (coeff, lado_derecho, tipo_map.get(signo, "<="))
 
 
 # valida q la entrada no este vacia y parsea los coeficientes de la función objetivo
