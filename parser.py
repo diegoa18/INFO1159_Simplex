@@ -96,7 +96,7 @@ def pedir_num_vars() -> int:
             pass
         print("Debe ser un entero positivo.")
 
-
+# pide coeficientes de la función objetivo
 def pedir_funcion_objetivo(n_vars: int) -> list[float]:
     ejemplo = " ".join(["a" + str(i + 1) for i in range(n_vars)])
     while True:

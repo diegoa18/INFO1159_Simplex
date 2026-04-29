@@ -10,11 +10,8 @@ from simplex.simplex_solver import SimplexSolver
 from simplex.problem import LinearProgram
 from simplex.types import ConstraintType, ObjectiveType
 
-
+# convierte formato neutro a LinearProgram (simplex)
 def _convertir(tipo: str, fo: list[float], restricciones) -> LinearProgram:
-    """Convierte formato neutro a LinearProgram (simplex)."""
-    n_vars = len(fo)
-    n_res = len(restricciones)
 
     A = np.array([r[0] for r in restricciones], dtype=np.float64)
     b = np.array([r[1] for r in restricciones], dtype=np.float64)
