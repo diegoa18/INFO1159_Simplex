@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-# SIEMPRE SE BUSCA [[0],[0],[1],[0],[O]], osea un solo 1 en la columna
-from .constants import EPSILON
 from .exceptions import PivotError
-from .tableado.xlsx_tableau_repo import cargar_matriz_desde_excel
-from .tableado.tableau import Tableau
+from .tableau import Tableau
+
+# SIEMPRE SE BUSCA [[0],[0],[1],[0],[O]], osea un solo 1 en la columna
+from .types import EPSILON
 
 
+# pivotea la fila pivot_row usando la columna pivot_col como pivote
 def pivot(
     tableau: Tableau,  # estado actual
     pivot_row: int,  # fil var saliente
@@ -16,19 +17,15 @@ def pivot(
     epsilon: float = EPSILON,
 ) -> Tableau:
     total_vars = (
-        tableau.num_original_vars
-        + tableau.num_slack
-        + tableau.num_surplus
-        + tableau.num_artificial
+        tableau.num_variables_originales
+        + tableau.num_holguras
+        + tableau.num_excesos
+        + tableau.num_artificiales
     )
 
-    # se toma como fuente la matriz guardada en el excel; si no existe, usa la actual
-    try:
-        data = cargar_matriz_desde_excel(total_vars, tableau.num_constraints)
-    except (FileNotFoundError, ValueError):
-        data = tableau.data.copy()
+    data = tableau.datos.copy()
 
-    pivot_val = data[pivot_row, pivot_col]
+    pivot_val = float(data[pivot_row, pivot_col])
 
     if abs(pivot_val) < epsilon:  # pivot != 0
         raise PivotError(f"Pivot value at ({pivot_row}, {pivot_col}) is zero")
@@ -41,29 +38,33 @@ def pivot(
             continue
 
         # coeficiente a pitiar
-        factor = data[i, pivot_col]
+        factor = float(data[i, pivot_col])
         if abs(factor) > epsilon:
             data[i] -= (
                 factor * data[pivot_row]
             )  # Ri = Ri - factor * Rpivot, para colpivot = 0
 
+    data[np.abs(data) < epsilon] = 0.0
+
     # actualizar VB
-    new_basic = tableau.basic_vars.copy()
+    new_basic = tableau.variables_basicas.copy()
     new_basic[pivot_row] = pivot_col  # ej: s1->x1
 
     all_vars = np.arange(total_vars, dtype=np.intp)  # para [0,1,2,..,n]
 
     nonbasic = np.setdiff1d(all_vars, new_basic, assume_unique=True)  # todas - VB
 
-    nuevo_tableau = Tableau(  # nuevo objeto tableau actualizado
-        data=data,
-        basic_vars=new_basic,
-        nonbasic_vars=nonbasic,
-        num_original_vars=tableau.num_original_vars,
-        num_constraints=tableau.num_constraints,
-        num_slack=tableau.num_slack,
-        num_surplus=tableau.num_surplus,
-        num_artificial=tableau.num_artificial,
-    )
 
+    nuevo_tableau = Tableau(  # nuevo objeto tableau actualizado
+        datos=data,
+        variables_basicas=new_basic,
+        variables_no_basicas=nonbasic,
+        num_variables_originales=tableau.num_variables_originales,
+        num_restricciones=tableau.num_restricciones,
+        num_holguras=tableau.num_holguras,
+        num_excesos=tableau.num_excesos,
+        num_artificiales=tableau.num_artificiales,
+        objective=tableau.objective,
+    )
+    
     return nuevo_tableau

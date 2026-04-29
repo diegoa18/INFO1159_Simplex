@@ -1,15 +1,45 @@
 from __future__ import annotations
 
-from simplex import InfeasibleError, UnboundedError, solve
-from simplex.input_parser import build_problem_from_input
+import sys
+sys.path.insert(0, "..")
+
+import numpy as np
+from parser import pedir_problema
+from simplex import InfeasibleError, UnboundedError
+from simplex.simplex_solver import SimplexSolver
+from simplex.problem import LinearProgram
+from simplex.types import ConstraintType, ObjectiveType
+
+# convierte formato neutro a LinearProgram (simplex)
+def _convertir(tipo: str, fo: list[float], restricciones) -> LinearProgram:
+
+    A = np.array([r[0] for r in restricciones], dtype=np.float64)
+    b = np.array([r[1] for r in restricciones], dtype=np.float64)
+    c = np.array(fo, dtype=np.float64)
+
+    tipo_map = {
+        "<=": ConstraintType.LE,
+        ">=": ConstraintType.GE,
+        "=": ConstraintType.EQ,
+    }
+    constraints_arr = np.array(
+        [tipo_map[r[2]] for r in restricciones], dtype=np.int_
+    )
+
+    obj = ObjectiveType.MAX if tipo == "max" else ObjectiveType.MIN
+
+    return LinearProgram(A=A, b=b, c=c, constraints=constraints_arr, objective=obj)
 
 
+# pedimos problema y convertimos a formato simplex, luego resolvemos e imprimimos resultados
 def main() -> None:
-    problem = build_problem_from_input()
+    tipo, fo, restricciones = pedir_problema()
+    lp = _convertir(tipo, fo, restricciones)
 
-    # RESOLUCION
+    solver = SimplexSolver(trazo=True)
+
     try:
-        solution = solve(problem, trace=True)
+        solution = solver.solve(lp)
         print("SOLUCION OPTIMA")
         print("-" * 60)
 
@@ -21,11 +51,11 @@ def main() -> None:
         print(f"iteraciones: {solution.iterations}")
 
     except UnboundedError as e:
-        print("cueck")
+        print("Problema no acotado")
         print(e)
 
     except InfeasibleError as e:
-        print("es infactible")
+        print("Problema infactible")
         print(e)
 
 

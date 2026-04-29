@@ -8,22 +8,17 @@ from .exceptions import (
     UnboundedError,
 )
 from .pivot import pivot
-from .problem import LinearProgram
-from .algoritmo.simplex_solver import (
-    choose_entering,
-    choose_leaving,
+from .problem import LinearProgram, Solution
+from .simplex_solver import (
+    quien_entra,
+    quien_sale,
 )
-from .solve import solve
-from .solution import Solution
-from .tableado.tableau import Tableau
+from .tableau import Tableau
 from .types import (
-    BasicIndices,
-    ConstraintRelations,
+    Tupla,
     ConstraintType,
-    Matrix,
-    NonBasicIndices,
+    Matriz,
     ObjectiveType,
-    Vector,
 )
 
 __all__ = [  # ->interfaz paquete
@@ -46,6 +41,6 @@ __all__ = [  # ->interfaz paquete
     "pivot",
     "solve",
     "Solution",
-    "choose_entering",
-    "choose_leaving",
+    "quien_entra",
+    "quien_sale",
 ]
