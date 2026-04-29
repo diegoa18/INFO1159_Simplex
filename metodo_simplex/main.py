@@ -12,34 +12,42 @@ from simplex.types import ConstraintType, ObjectiveType
 
 # convierte formato neutro a LinearProgram (simplex)
 def _convertir(tipo: str, fo: list[float], restricciones) -> LinearProgram:
+    
+    A = np.array([r[0] for r in restricciones], dtype=np.float64) # array de coeficientes de reestricciones
+    b = np.array([r[1] for r in restricciones], dtype=np.float64) # array de LD de reestricciones
+    c = np.array(fo, dtype=np.float64) # array de ceoficientes de la FO
 
-    A = np.array([r[0] for r in restricciones], dtype=np.float64)
-    b = np.array([r[1] for r in restricciones], dtype=np.float64)
-    c = np.array(fo, dtype=np.float64)
-
+    # convierte strings en numeraciones
     tipo_map = {
-        "<=": ConstraintType.LE,
-        ">=": ConstraintType.GE,
-        "=": ConstraintType.EQ,
+        "<=": ConstraintType.LE, # menor o igual que
+        ">=": ConstraintType.GE, # mayor o igual que
+        "=": ConstraintType.EQ, # igual a 
     }
+    # convertimos los tipos de restricciones a un array de ConstraintType
     constraints_arr = np.array(
         [tipo_map[r[2]] for r in restricciones], dtype=np.int_
     )
-
+    # convertimos el tipo de objetivo a ObjectiveType con su tipo de optimización
     obj = ObjectiveType.MAX if tipo == "max" else ObjectiveType.MIN
 
+    # devuelve el problema en objeto para su uso 
     return LinearProgram(A=A, b=b, c=c, constraints=constraints_arr, objective=obj)
 
 
 # pedimos problema y convertimos a formato simplex, luego resolvemos e imprimimos resultados
 def main() -> None:
+    # pedimos problema  
     tipo, fo, restricciones = pedir_problema()
-    lp = _convertir(tipo, fo, restricciones)
 
+    # instanciamos el problema en formato simplex
+    lp = _convertir(tipo, fo, restricciones)
+    # activa simplex solver 
     solver = SimplexSolver(trazo=True)
 
     try:
+        #resuelve el problema 
         solution = solver.solve(lp)
+        # imprime resultados
         print("SOLUCION OPTIMA")
         print("-" * 60)
 

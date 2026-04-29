@@ -3,31 +3,32 @@ from typing import Optional
 
 # convierte de string a float, maneja signos negativos
 def _parse_real(s: str) -> float:
-    s = s.strip()
-    if s.startswith("-"):
-        s = s[1:]
-        return -float(s) if s else -1.0
-    return float(s) if s else 1.0
+    s = s.strip() # elimina espacios
+    if s.startswith("-"): # verifica si es negativo
+        s = s[1:] # elimina signo y lo vuelve negativo
+        return -float(s) if s else -1.0 # retorna el valor negativo o -1 si no hay numero
+    return float(s) if s else 1.0 # si no hay numero, se asume coeficiente 1
 
 
 # limpia cadena, mapea coeficientes a variables especificas (x, y, z, w, u, v)
 def _parse_coeffs(texto: str) -> list[float]:
-    texto = texto.replace("-", "+-").replace(" ", "")
-    partes = [p for p in texto.split("+") if p]
+    texto = texto.replace("-", "+-").replace(" ", "") # cambia los signos por espacio
+    partes = [p for p in texto.split("+") if p] # separa los terminos 
     coeffs = []
-    vars_orden = ["x", "y", "z", "w", "u", "v"]
-    coef_map = {v: 0.0 for v in vars_orden}
-
+    vars_orden = ["x", "y", "z", "w", "u", "v"] #variables conocidas
+    coef_map = {v: 0.0 for v in vars_orden} # crea mapa de variables a coeficientes
+    # recorre cada parte 
     for p in partes:
-        for var in vars_orden:
+        for var in vars_orden: # detecta la variable
             if var in p:
-                coef = p.replace(var, "")
-                coef_map[var] = _parse_real(coef) if coef else 1.0
+                coef = p.replace(var, "") # extrae el coeficiente 
+                coef_map[var] = _parse_real(coef) if coef else 1.0 # asigna valor al mapa
                 break
 
+    #arma el vector final
     for var in vars_orden:
-        if coef_map[var] != 0.0:
-            coeffs.append(coef_map[var])
+        if coef_map[var] != 0.0: # verifica si la variable tiene un coeficiente asignado
+            coeffs.append(coef_map[var]) # agrega el coeficiente al resultado final
 
     return coeffs
 
@@ -45,33 +46,33 @@ def _detectar_signo(texto: str) -> tuple[str, str, str]:
 def parse_restriccion(
     texto: str, n_vars: Optional[int] = None
 ) -> tuple[list[float], float, str]:
-    izq, der, signo = _detectar_signo(texto)
-    rhs = float(der.strip())
+    izq, der, signo = _detectar_signo(texto) # divide la restriccion en partes ( izq, der, signo)
+    rhs = float(der.strip()) # convierte el lado derecho a float
 
-    if "x" in izq.lower() or "y" in izq.lower():
-        coeff = _parse_coeffs(izq)
+    if "x" in izq.lower() or "y" in izq.lower(): # detecta el formato del lado izquierdo
+        coeff = _parse_coeffs(izq) # si hay variables, parsea los coeficientes
     else:
-        coeff = [float(x) for x in izq.split()]
+        coeff = [float(x) for x in izq.split()] # si no hay, asume que son coef separados por espacios
 
-    if n_vars and len(coeff) != n_vars:
+    if n_vars and len(coeff) != n_vars: # manejo de erorres para verificar tamaño
         raise ValueError(f"Se esperaban {n_vars} coeficientes, got {len(coeff)}")
 
-    tipo_map = {"<=": "<=", ">=": ">=", "=": "="}
-    return (coeff, rhs, tipo_map.get(signo, "<="))
+    tipo_map = {"<=": "<=", ">=": ">=", "=": "="} # mapea los signos 
+    return (coeff, rhs, tipo_map.get(signo, "<=")) # retorna la restriccion parseada
 
 
 # valida q la entrada no este vacia y parsea los coeficientes de la función objetivo
 def parse_funcion_objetivo(texto: str, n_vars: int) -> list[float]:
-    texto = texto.strip()
+    texto = texto.strip() #separa los coef por espacios y elimina estos
     if not texto:
         raise ValueError("Función objetivo vacía")
 
     if "x" in texto.lower():
-        coeff = _parse_coeffs(texto)
+        coeff = _parse_coeffs(texto) # si no hay var, parsea los coef 
     else:
-        coeff = [float(x) for x in texto.split()]
+        coeff = [float(x) for x in texto.split()] # si no hay var, asume que son coef separados por espacios
 
-    if len(coeff) != n_vars:
+    if len(coeff) != n_vars: # manejo de errores para verificar tamaño
         raise ValueError(f"Se esperaban {n_vars} coeficientes, got {len(coeff)}")
     return coeff
 
