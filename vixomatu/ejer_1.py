@@ -1,23 +1,33 @@
 import numpy as np
 import sympy as sp
 
+# definimos tus variables simbólicas
 x1, x2 = sp.symbols("x1 x2")
 theta = sp.symbols("theta")
 
+# pedimos los datos por terminal
+print("ejemplo: 1.20*x1 + 1.16*x2 - theta*(2*(x1**2) + x2**2 + (x1 + x2)**2)")
+func_str = input("ingresa la función objetivo usando x1, x2 y theta: ")
+theta_value = float(input("ingresa el valor de theta: "))
 
+# convertimos el texto a una expresión matemática de sympy
+f_expr = sp.sympify(func_str)
+
+# creamos una función evaluable con numpy (esto es necesario para que el ciclo for sea rápido)
+funcion_evaluable = sp.lambdify((x1, x2, theta), f_expr, "numpy")
+
+# mantenemos tu función original intacta en su lógica
 def fc(x, y, var):
-    f = 1.20 * x + 1.16 * y - var * (2 * (x**2) + y**2 + (x + y) ** 2)
+    # evalúa la función ingresada en vez de tenerla escrita en el código
+    f = funcion_evaluable(x, y, var)
     return f
 
-
-theta_value = float(input("Ingresa el valor de theta: "))
-
-# Definir el rango para x1 y x2
+# definir el rango para x1 y x2
 Δx = np.arange(0, 5, 1e-2)
 
 postulantes = []
 
-# Búsqueda por fuerza bruta: evaluar en cada punto de la cuadrícula
+# búsqueda por fuerza bruta: evaluar en cada punto de la cuadrícula
 for x in Δx:
     for y in Δx:
         if x + y <= 5:
