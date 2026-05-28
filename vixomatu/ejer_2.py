@@ -1,12 +1,13 @@
-from math import cos, sin
+from math import cos, pi, sin
 
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
+from sympy.core.sympify import converter
 
 x = sp.symbols("x")
 
-Δλ = np.arange(0, 1, 0.01)
+Δλ = np.arange(0.01, 1, 0.01)
 
 funcion_str = input("ingrese la funcion: ")
 funcion = sp.sympify(funcion_str)
@@ -17,42 +18,23 @@ puntos_str = input("Ingrese los puntos xa y xb: ")
 xa_val, xb_val = sp.sympify(puntos_str)
 
 
-def convexa(funcion, var, xa, xb):
-    for λ in Δλ:
-        evaluado = λ * xa + (1 - λ) * xb
-        lado_izq = funcion.subs(var, evaluado)
-        lado_der = λ * funcion.subs(var, xa) + (1 - λ) * funcion.subs(var, xb)
-
-        if lado_izq > lado_der:
-            return False
-
-    return True
-
-
-def concava(funcion, var, xa, xb):
-    for λ in Δλ:
-        evaluado = λ * xa + (1 - λ) * xb
-        lado_izq = funcion.subs(var, evaluado)
-        lado_der = λ * funcion.subs(var, xa) + (1 - λ) * funcion.subs(var, xb)
-
-        if lado_izq < lado_der:
-            return False
-
-    return True
-
-
 def convex_o_conca(funcion, var, xa, xb):
-    es_conv = convexa(funcion, var, xa, xb)
-    es_conc = concava(funcion, var, xa, xb)
+    f_xa = funcion.subs(var, xa)
+    f_xb = funcion.subs(var, xb)
+    for λ in Δλ:
+        evaluado = λ * xa + (1 - λ) * xb
 
-    if es_conv and es_conc:
-        return "La función es Convexa y Cóncava"
-    elif es_conv:
-        return "La función es Convexa"
-    elif es_conc:
-        return "La función es Cóncava"
-    else:
-        return "La función no es ni convexa ni cóncava entre esos puntos"
+        lado_izq = funcion.subs(var, evaluado)
+        lado_der = λ * f_xa + (1 - λ) * f_xb
+
+        # Comparamos
+        if lado_izq > lado_der:
+            return "es cóncava"
+
+        elif lado_izq < lado_der:
+            return "es convexa"
+
+    return "No es ni convexa ni cóncava"
 
 
 resultado = convex_o_conca(funcion, x, xa_val, xb_val)
